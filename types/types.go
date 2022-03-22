@@ -9,9 +9,9 @@ type Sample struct {
 }
 
 // NewSample constructs a new Sample.
-func NewSample(name string) *Sample {
+func NewSample(filepath string) *Sample {
 	return &Sample{
-		Name: name,
-		Path: path.Base(name),
+		Name: path.Base(filepath),
+		Path: filepath,
 	}
 }
