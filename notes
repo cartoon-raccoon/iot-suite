@@ -1,0 +1,29 @@
+features:
+
+static analysis:
+  - strings
+  - elf section/program headers
+  - disassembly??
+  - fuzzy hash
+  - sha256, md5 hashes
+  - upx unpacking??
+
+dynamic analysis:
+  - support for multiple architectures (via buildroot/qemu)
+    - vm comes with gdb/gdbserver for debugging if required
+  - network simulation and packet capture (inetsim/dumpcap)
+  - filesystem tracking (inotifywatch)
+  - system call tracing (strace -ff)
+  - library call tracing if sample is dynamically linked (ltrace -f)
+  - direct vm access for user (ssh|pipe) if invoked
+  - direct qemu monitor access if invoked
+
+memory analysis:
+  - system memory dump (volatility)
+  - core dump??
+
+dynamic analysis infrastructure:
+  - orchestration within vm coordinated by python script (subprocess)
+  - shell scripts set up and reset fakeroot environment
+  - files transferred to and from vm via ftp (pure-ftpd) (ssh/scp can be killed by malware)
+  - communication with vm done by pipe/stdio
