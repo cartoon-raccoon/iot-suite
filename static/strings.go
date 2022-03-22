@@ -22,15 +22,10 @@ type Strings struct {
 }
 
 // NewStrings constructs a new `strings` operation
-func NewStrings() (*Strings, error) {
-	_, err := exec.LookPath("strings")
-	if err != nil {
-		return nil, errors.New("'strings' not in $PATH")
-	}
-
+func NewStrings() *Strings {
 	return &Strings{
 		cmd: exec.Command("strings", "-t", "x"),
-	}, nil
+	}
 }
 
 // Run runs `strings` on the given file
