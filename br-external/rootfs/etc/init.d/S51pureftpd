@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Starts pure-ftpd FTP server.
+#
+
+start() {
+	PURE_FTPD_ARGS="$PURE_FTPD_ARGS"
+
+	printf "Starting pure-ftpd: "
+	umask 077
+
+	start-stop-daemon -S -q -p /var/run/pure-ftpd.pid\
+		--exec /usr/sbin/pure-ftpd -- $PURE_FTPD_ARGS
+
+	[ $? = 0 ] && echo "OK" || "echo "FAIL"
+}
+
+stop() {
+	printf "Stopping pure-ftpd: "
+	start-stop-daemon -K -q -p /var/run/pure-ftpd.pid
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+  	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac
+
+exit $?
+
