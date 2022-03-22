@@ -3,7 +3,6 @@ package static
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -11,8 +10,8 @@ import (
 
 // StringOffset holds the value of a string found by `strings` and its offset in the file.
 type StringOffset struct {
-	Str    string
 	Offset int64
+	Str    string
 }
 
 // Strings represents an operation with `strings`
@@ -63,20 +62,15 @@ func (str *Strings) Reset() {
 func (str *Strings) parseOutput() {
 	split := strings.Split(str.raw, "\n")
 
-	ret := []StringOffset{}
-
 	for _, element := range split {
+		//fmt.Printf("%s\n", element)
 		element = strings.TrimSpace(element)
 		offstr := strings.Split(element, " ")
-		if len(offstr) != 2 {
-			fmt.Printf("received offset_str of length %d", len(offstr))
-		}
 		offset, err := strconv.ParseInt(offstr[0], 16, 64)
 		if err != nil {
 			return
 		}
-		ret = append(ret, StringOffset{Str: offstr[1], Offset: offset})
+		strs := strings.Join(offstr[1:], " ")
+		str.Output = append(str.Output, StringOffset{Offset: offset, Str: strs})
 	}
-
-	str.Output = ret
 }
