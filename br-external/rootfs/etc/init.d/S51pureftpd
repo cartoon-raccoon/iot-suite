@@ -12,7 +12,7 @@ start() {
 	start-stop-daemon -S -q -p /var/run/pure-ftpd.pid\
 		--exec /usr/sbin/pure-ftpd -- $PURE_FTPD_ARGS
 
-	[ $? = 0 ] && echo "OK" || "echo "FAIL"
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
 }
 
 stop() {
