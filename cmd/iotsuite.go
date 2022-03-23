@@ -5,11 +5,39 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cartoon-raccoon/iot-suite/dynamic"
+	"github.com/cartoon-raccoon/iot-suite/orchestrator"
 	"github.com/cartoon-raccoon/iot-suite/static"
 )
 
 func main() {
+	testQemu()
+}
+
+func testQemu() {
+	conf := dynamic.QemuConfig{
+		Arch:   dynamic.ARCH_ARM,
+		User:   "root",
+		Passwd: "toor",
+		Append: "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
+		Image:  "vms/arm/",
+	}
+	qemu := dynamic.NewQemuWithConfig(&conf)
+	err := qemu.NonInteractive()
+	if err != nil {
+		qemu.Stop()
+		panic(err)
+	}
+	qemu.Stop()
+}
+
+func testStatic() {
 	file := os.Args[1]
+
+	err := orchestrator.CheckPathExes()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+	}
 
 	sa, err := static.NewWith(file)
 	if err != nil {
