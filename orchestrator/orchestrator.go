@@ -6,9 +6,12 @@ import (
 	"os/exec"
 
 	"github.com/cartoon-raccoon/iot-suite/dynamic"
+	"github.com/cartoon-raccoon/iot-suite/static"
 )
 
 type Orchestrator struct {
+	dyns  []dynamic.DynamicAnalyzer
+	stats []static.StaticAnalyzer
 }
 
 // CheckPathExes checks that all required executables are present
