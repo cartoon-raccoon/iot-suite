@@ -258,18 +258,21 @@ func (q *Qemu) RunCmd(cmd string) (CmdResult, error) {
 	if err != nil {
 		return CmdResult{}, err
 	}
-	s = strings.Replace(s, q.prompt, "", 1000)
+	s = sanitize(s, q.prompt, cmd)
+
 	//! debug
-	fmt.Printf(s)
+	fmt.Printf("Output: %s\n", s)
 	// get the exit code
 	q.expect.SendLine("echo $?")
 	s2, err := q.expect.ExpectString(q.prompt)
 	if err != nil {
 		return CmdResult{}, err
 	}
-	s2 = strings.Replace(s2, q.prompt, "", 1000)
+
+	s2 = sanitize(s2, q.prompt, "echo $?")
+
 	//! debug
-	fmt.Printf(s)
+	fmt.Printf("Exitcode: %s\n", s2)
 	code, err := strconv.Atoi(s2)
 	if err != nil {
 		return CmdResult{}, err
@@ -278,6 +281,16 @@ func (q *Qemu) RunCmd(cmd string) (CmdResult, error) {
 		Output:   s,
 		Exitcode: code,
 	}, nil
+}
+
+// Strips out the prompt, the command that was sent, and any
+// leading or trailing whitespace
+func sanitize(s string, prompt string, cmd string) string {
+	s = strings.Replace(s, prompt, "", 1000)
+	s = strings.Replace(s, cmd, "", 1000)
+	s = strings.TrimSpace(s)
+
+	return s
 }
 
 // Stops the QEMU process
