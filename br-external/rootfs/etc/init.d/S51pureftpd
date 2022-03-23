@@ -9,8 +9,8 @@ start() {
 	printf "Starting pure-ftpd: "
 	umask 077
 
-	start-stop-daemon -S -q -p /var/run/pure-ftpd.pid\
-		--exec /usr/sbin/pure-ftpd -- $PURE_FTPD_ARGS
+	start-stop-daemon -S -qb -p /var/run/pure-ftpd.pid\
+		--exec /usr/sbin/pure-ftpd -- ${PURE_FTPD_ARGS}
 
 	[ $? = 0 ] && echo "OK" || echo "FAIL"
 }
