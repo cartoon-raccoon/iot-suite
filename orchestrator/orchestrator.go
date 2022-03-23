@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+
+	"github.com/cartoon-raccoon/iot-suite/dynamic"
 )
 
 type Orchestrator struct {
@@ -12,11 +14,14 @@ type Orchestrator struct {
 // CheckPathExes checks that all required executables are present
 func CheckPathExes() error {
 	required := []string{
-		QEMU_ARM_CMD, QEMU_MIPS_CMD,
-		QEMU_MIPSEL_CMD, QEMU_M68K_CMD,
-		QEMU_PPC_CMD, QEMU_I386_CMD,
-		QEMU_AMD64_CMD, STRINGS_CMD,
-		SSDEEP_CMD,
+		dynamic.QEMU_ARM_CMD,
+		dynamic.QEMU_MIPS_CMD,
+		dynamic.QEMU_MIPSEL_CMD,
+		dynamic.QEMU_M68K_CMD,
+		dynamic.QEMU_PPC_CMD,
+		dynamic.QEMU_I386_CMD,
+		dynamic.QEMU_AMD64_CMD,
+		"strings", "ssdeep",
 	}
 
 	for _, elem := range required {
@@ -28,15 +33,3 @@ func CheckPathExes() error {
 
 	return nil
 }
-
-const (
-	QEMU_ARM_CMD    = "qemu-system-arm"
-	QEMU_MIPS_CMD   = "qemu-system-mips"
-	QEMU_MIPSEL_CMD = "qemu-system-mipsel"
-	QEMU_M68K_CMD   = "qemu-system-m68k"
-	QEMU_PPC_CMD    = "qemu-system-ppc"
-	QEMU_I386_CMD   = "qemu-system-i386"
-	QEMU_AMD64_CMD  = "qemu-system-x86_64"
-	STRINGS_CMD     = "strings"
-	SSDEEP_CMD      = "ssdeep"
-)
