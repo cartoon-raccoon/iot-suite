@@ -22,7 +22,9 @@ memory analysis:
   - system memory dump (volatility)
   - core dump??
 
-sample matching:
+result presentation:
+  - domains/ips and ports accessed
+  - filesystem changes
   - yara rule matching
   - support for virustotal API
 
@@ -33,6 +35,14 @@ dynamic analysis infrastructure:
   - communication with vm done by pipe/stdio
 
 todo:
+  - set up logging
+  - better error handling, more informative
   - create makefile for testing
   - test vm scripts
   - implement fuzzy hashing
+
+subcommands:
+  static  
+  dynamic --transfer/-x [FTP|SCP]
+  full    --transfer/-x [FTP|SCP]
+  qemu    --comms/-c [STDIO|SSH]
