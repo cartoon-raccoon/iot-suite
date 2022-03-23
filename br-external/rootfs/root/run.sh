@@ -30,5 +30,9 @@ run() {
 cleanup() {
     pkill inetsim
 
+    umount /root/fakeroot/proc
+    umount /root/fakeroot/sys
+    umount /root/fakeroot/dev
+
     rm -rf /root/fakeroot
 }
