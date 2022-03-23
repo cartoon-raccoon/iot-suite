@@ -22,8 +22,17 @@ memory analysis:
   - system memory dump (volatility)
   - core dump??
 
+sample matching:
+  - yara rule matching
+  - support for virustotal API
+
 dynamic analysis infrastructure:
   - orchestration within vm coordinated by python script (subprocess)
   - shell scripts set up and reset fakeroot environment
   - files transferred to and from vm via ftp (pure-ftpd) (ssh/scp can be killed by malware)
   - communication with vm done by pipe/stdio
+
+todo:
+  - create makefile for testing
+  - test vm scripts
+  - implement fuzzy hashing
