@@ -17,13 +17,19 @@ func main() {
 func testQemu() {
 	conf := dynamic.QemuConfig{
 		Arch:   dynamic.ARCH_ARM,
-		User:   "root",
-		Passwd: "toor",
+		User:   "tester",
+		Passwd: "itestmalware",
 		Append: "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
 		Image:  "vms/arm/",
 	}
 	qemu := dynamic.NewQemuWithConfig(&conf)
 	err := qemu.NonInteractive()
+	if err != nil {
+		qemu.Stop()
+		panic(err)
+	}
+	res, err := qemu.RunCmd("echo \"Hello\"")
+	fmt.Printf("Result: %v\n", res)
 	if err != nil {
 		qemu.Stop()
 		panic(err)
