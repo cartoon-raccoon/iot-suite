@@ -1,10 +1,21 @@
 #!/bin/sh
 
+# User must run this with root perms
 if [ $(id -u) -ne 0 ]; then
     echo "Please run this as root."
     exit 1
 fi
 
+# Check if the inetsim directory is present
+[ -d /opt/inetsim ] || echo "FATAL: inetsim not installed"; exit 2
+
 cd /opt/inetsim
+
+# Check if setup has been run; if not, run it
+if ! [ -f setup_done ]; then
+    echo "First time running inetsim - setting up permissions"
+    ./setup.sh
+    touch setup_done
+fi
 
 exec ./inetsim
