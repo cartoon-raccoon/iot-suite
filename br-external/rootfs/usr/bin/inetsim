@@ -7,7 +7,10 @@ if [ $(id -u) -ne 0 ]; then
 fi
 
 # Check if the inetsim directory is present
-[ -d /opt/inetsim ] || echo "FATAL: inetsim not installed"; exit 2
+if ! [ -d /opt/inetsim ]; then
+    echo "FATAL: inetsim not installed"
+    exit 2
+fi
 
 cd /opt/inetsim
 
