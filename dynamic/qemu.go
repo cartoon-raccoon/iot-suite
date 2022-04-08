@@ -19,7 +19,9 @@ const (
 )
 
 type Qemu struct {
-	Config  *QemuConfig
+	// Public
+	Config *QemuConfig
+	//Private
 	cmd     []string
 	prompt  string
 	process *exec.Cmd
@@ -37,6 +39,10 @@ type QemuConfig struct {
 	Passwd string
 	// Arguments to pass to the kernel
 	Append string
+	// The network device model
+	Nic string
+	// The fully qualified path to the tap device helper
+	Helper string
 	// The path to the VM directory
 	Image string
 }
@@ -158,7 +164,8 @@ func (q *Qemu) constructQemuCmd() error {
 	//get kernel args and append it to the command
 	q.cmd = append(q.cmd, "-append", q.Config.Append)
 
-	q.cmd = append(q.cmd, "-net", "nic,model=rtl8139")
+	q.cmd = append(q.cmd, "-nic",
+		fmt.Sprintf("tap,model=%s,helper=%s", q.Config.Nic, q.Config.Helper))
 	//get hostfwds and append it to the command
 	if len(q.Config.PortFwds) > 0 {
 		var hostfwdstrs []string
@@ -286,7 +293,7 @@ func (q *Qemu) RunCmd(cmd string) (CmdResult, error) {
 // Strips out the prompt, the command that was sent, and any
 // leading or trailing whitespace
 func sanitize(s string, prompt string, cmd string) string {
-	s = strings.Replace(s, prompt, "", 1000)
+	s = strings.Replace(s, prompt, "", 1)
 	s = strings.Replace(s, cmd, "", 1000)
 	s = strings.TrimSpace(s)
 
