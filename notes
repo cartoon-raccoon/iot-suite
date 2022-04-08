@@ -12,15 +12,16 @@ dynamic analysis:
   - support for multiple architectures (via buildroot/qemu)
     - vm comes with gdb/gdbserver for debugging if required
   - network simulation and packet capture (inetsim/dumpcap)
-  - filesystem tracking (inotifywatch)
-  - system call tracing (strace -ff)
+  - filesystem tracking (inotifywatch) - open, edit delete (and which process)
+  - system call tracing (strace -ff) - (cross reference with fs changes)
   - library call tracing if sample is dynamically linked (ltrace -f)
   - direct vm access for user (ssh|pipe) if invoked
   - direct qemu monitor access if invoked
+  - enabling addition of user-defined / predefined cmd-line arguments
 
 memory analysis:
   - system memory dump (volatility)
-  - core dump??
+  - core dump/analysis
 
 result presentation:
   - domains/ips and ports accessed
