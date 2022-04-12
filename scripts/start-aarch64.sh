@@ -16,7 +16,7 @@ else
 fi
 
 exec qemu-system-aarch64 \
-    -M virt -cpu cortex-a53 -smp 1 -kernel Image \
+    -M virt -cpu cortex-a53 -smp 1 -kernel kernel.img \
     -append "rootwait root=/dev/vda console=ttyAMA0 quiet" \
     -netdev user,id=eth0,hostfwd=tcp::6555-:22,hostfwd=tcp::6554-:21 \
     -device virtio-net-device,netdev=eth0 \

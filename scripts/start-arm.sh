@@ -21,7 +21,7 @@ fi
 
 exec qemu-system-arm \
 	-M versatilepb \
-	-kernel zImage \
+	-kernel kernel.img \
 	-dtb versatile-pb.dtb \
 	-drive file=rootfs.ext2,if=scsi,format=raw \
 	-append "rootwait quiet root=/dev/sda console=ttyAMA0,115200" \

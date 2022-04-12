@@ -15,10 +15,9 @@ else
     EXTRA_ARGS="-serial mon:stdio"
 fi
 
-export PATH="/home/sammy/Projects/iot-suite/buildroot/output/host/bin:${PATH}"
 exec qemu-system-mips \
     -M malta -cpu mips32r6-generic \
-    -kernel vmlinux \
+    -kernel kernel.img \
     -drive file=rootfs.ext2,format=raw \
     -append "rootwait root=/dev/sda quiet" \
     -nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:00:12:34:56 \

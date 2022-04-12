@@ -17,7 +17,7 @@ fi
 
 exec qemu-system-mipsel \
     -M malta -cpu mips32r6-generic \
-    -kernel vmlinux \
+    -kernel kernel.img \
     -drive file=rootfs.ext2,format=raw \
     -append "rootwait root=/dev/sda quiet" \
     -nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:00:12:34:56 \
