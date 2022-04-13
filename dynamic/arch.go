@@ -1,6 +1,9 @@
 package dynamic
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 const (
 	// ARM architecture
@@ -32,6 +35,49 @@ const (
 	QEMU_AMD64_CMD  = "qemu-system-x86_64"
 )
 
+func ArchArgs(arch int, kern string, vmdir string, nic_helper string, mac string) ([]string, error) {
+	args := make([]string, 0)
+	switch arch {
+	case ARCH_ARM:
+		return append(args,
+			"-M", "versatilepb",
+			"-kernel", fmt.Sprintf("%s/%s", vmdir, kern),
+			"-dtb", fmt.Sprintf("%s/versatile-pb.dtb", vmdir),
+			"-drive", fmt.Sprintf("file=%s/rootfs.ext2,if=scsi,format=raw", vmdir),
+			"-append", "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
+			"-nic", fmt.Sprintf("tap,model=rtl8139,helper=%s,mac=%s", nic_helper, mac),
+		), nil
+	case ARCH_MIPS:
+		return append(args,
+			"-M", "malta",
+			"-cpu", "mips32r6-generic",
+			"-kernel", fmt.Sprintf("%s/%s", vmdir, kern),
+			"-drive", fmt.Sprintf("file=%s/rootfs.ext2,if=scsi,format=raw", vmdir),
+			"-append", "rootwait root=/dev/sda quiet",
+			"-nic", fmt.Sprintf("tap,model=pcnet,helper=%s,mac=%s", nic_helper, mac),
+		), nil
+	case ARCH_MIPSEL:
+		return append(args,
+			"-M", "malta",
+			"-cpu", "mips32r6-generic",
+			"-kernel", fmt.Sprintf("%s/%s", vmdir, kern),
+			"-drive", fmt.Sprintf("file=%s/rootfs.ext2,if=scsi,format=raw", vmdir),
+			"-append", "rootwait root=/dev/sda quiet",
+			"-nic", fmt.Sprintf("tap,model=pcnet,helper=%s,mac=%s", nic_helper, mac),
+		), nil
+	case ARCH_M68K:
+		return args, errors.New("m68k unimplemented")
+	case ARCH_PPC:
+		return args, errors.New("powerpc unimplemented")
+	case ARCH_I386:
+		return args, errors.New("i386 unimplemented")
+	case ARCH_AMD64:
+		return args, errors.New("amd64 unimplemented")
+	default:
+		return args, errors.New("unknown architecture")
+	}
+}
+
 // Retrieves the qemu command for the architecture being used.
 func ArchToCmd(arch int) (string, error) {
 	switch arch {
@@ -49,27 +95,6 @@ func ArchToCmd(arch int) (string, error) {
 		return QEMU_I386_CMD, nil
 	case ARCH_AMD64:
 		return QEMU_AMD64_CMD, nil
-	default:
-		return "", errors.New("unknown architecture")
-	}
-}
-
-// Retrieves the qemu machine name for the given arch
-func ArchToMachine(arch int) (string, error) {
-	switch arch {
-	case ARCH_ARM:
-		return "versatilepb", nil
-	case ARCH_MIPS:
-		return "malta", nil
-	default:
-		return "", errors.New("unknown architecture")
-	}
-}
-
-func ArchToDTB(arch int) (string, error) {
-	switch arch {
-	case ARCH_ARM:
-		return "versatile-pb", nil
 	default:
 		return "", errors.New("unknown architecture")
 	}

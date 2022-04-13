@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -30,17 +29,13 @@ type Qemu struct {
 }
 
 type QemuConfig struct {
-	// host/guest port mapping
-	PortFwds map[int16]int16
 	// The architecture of the machine
 	Arch int
 	// The user to log in as, and password
 	User   string
 	Passwd string
-	// Arguments to pass to the kernel
-	Append string
-	// The network device model
-	Nic string
+	// The MAC address of the device
+	Mac string
 	// The fully qualified path to the tap device helper
 	Helper string
 	// The path to the VM directory
@@ -133,50 +128,18 @@ func (q *Qemu) constructQemuCmd() error {
 	}
 
 	q.cmd = append(q.cmd, maincmd)
-	vmpath, err := filepath.Abs(q.Config.Image)
+
+	qcmdargs, err := ArchArgs(q.Config.Arch,
+		"kernel.img",
+		q.Config.Image,
+		q.Config.Helper,
+		q.Config.Mac,
+	)
 	if err != nil {
 		return err
 	}
 
-	// get the machine name and append it to the command
-	machine, err := ArchToMachine(q.Config.Arch)
-	if err != nil {
-		return err
-	}
-	q.cmd = append(q.cmd, "-M", machine)
-
-	// get the kernel path and append it to the command
-	kernelpath := fmt.Sprintf("%s/zImage", vmpath)
-	q.cmd = append(q.cmd, "-kernel", kernelpath)
-
-	// get the DTB path and append it to the command
-	dtb, err := ArchToDTB(q.Config.Arch)
-	if err != nil {
-		return err
-	}
-	dtbpath := fmt.Sprintf("%s/%s.dtb", vmpath, dtb)
-	q.cmd = append(q.cmd, "-dtb", dtbpath)
-
-	//get drive path and append it to the command
-	drivepath := fmt.Sprintf("file=%s/rootfs.ext2,if=scsi,format=raw", vmpath)
-	q.cmd = append(q.cmd, "-drive", drivepath)
-
-	//get kernel args and append it to the command
-	q.cmd = append(q.cmd, "-append", q.Config.Append)
-
-	q.cmd = append(q.cmd, "-nic",
-		fmt.Sprintf("tap,model=%s,helper=%s", q.Config.Nic, q.Config.Helper))
-	//get hostfwds and append it to the command
-	if len(q.Config.PortFwds) > 0 {
-		var hostfwdstrs []string
-		for k, v := range q.Config.PortFwds {
-			hostfwdstrs = append(hostfwdstrs,
-				fmt.Sprintf("hostfwd=tcp::%d-:%d", k, v),
-			)
-		}
-		hostfwds := fmt.Sprintf("user,id=net0,%s", strings.Join(hostfwdstrs, ","))
-		q.cmd = append(q.cmd, "-net", hostfwds)
-	}
+	q.cmd = append(q.cmd, qcmdargs...)
 
 	q.cmd = append(
 		q.cmd, "-nographic",
@@ -307,6 +270,7 @@ func (q *Qemu) Stop() error {
 	if err != nil {
 		return err
 	} else {
+		q.started = false
 		return nil
 	}
 }

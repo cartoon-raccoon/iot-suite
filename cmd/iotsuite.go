@@ -19,8 +19,9 @@ func testQemu() {
 		Arch:   dynamic.ARCH_ARM,
 		User:   "tester",
 		Passwd: "itestmalware",
-		Append: "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
-		Image:  "vms/arm/",
+		Mac:    "52:54:01:12:34:56",
+		Helper: "/usr/lib/qemu/qemu-bridge-helper",
+		Image:  "vms/arm",
 	}
 	qemu := dynamic.NewQemuWithConfig(&conf)
 	err := qemu.NonInteractive()
