@@ -15,9 +15,9 @@ else
 	EXTRA_ARGS="-serial mon:stdio"
 fi
 
-if ! [ -f /tmp/guest.in ] || [ -f /tmp/guest.out ]; then
-	mkfifo /tmp/guest.in /tmp/guest.out
-fi
+# if ! [ -f /tmp/guest.in ] || [ -f /tmp/guest.out ]; then
+# 	mkfifo /tmp/guest.in /tmp/guest.out
+# fi
 
 exec qemu-system-arm \
 	-M versatilepb \
