@@ -23,7 +23,7 @@ exec qemu-system-arm \
 	-M versatilepb \
 	-kernel kernel.img \
 	-dtb versatile-pb.dtb \
-	-drive file=rootfs.ext2,if=scsi,format=raw \
+	-drive file=rootfs.qcow2,if=scsi,format=qcow2 \
 	-append "rootwait quiet root=/dev/sda console=ttyAMA0,115200" \
 	-nic tap,model=rtl8139,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:01:12:34:56 \
 	-nographic ${EXTRA_ARGS}
