@@ -17,7 +17,7 @@
 /etc/network/if-pre-up.d		d	755	0	0	-	-	-	-	-
 /etc/network/if-down.d			d	755	0	0	-	-	-	-	-
 /etc/network/if-post-down.d		d	755	0	0	-	-	-	-	-
-/etc/init.d/S51pureftpd         f   755 0   0   -   -   -   -   -
+/etc/init.d/suppS51pureftpd         f   755 0   0   -   -   -   -   -
 /etc/init.d/suppS49inetsim      f   755 0   0   -   -   -   -   -
 /usr/bin/inetsim                f   755 0   0   -   -   -   -   -
 /opt/inetsim            d   755 0   0   0   0   -   -   -   -   -
