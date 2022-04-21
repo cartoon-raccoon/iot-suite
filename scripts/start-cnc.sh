@@ -3,7 +3,7 @@
 VM_FOLDER="vms"
 
 if [[ "$1" == "-h" ]]; then
-    NET_ARGS="-nic tap,model=virtio-net-pci,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:02:12:34:56"
+    NET_ARGS="-nic tap,model=virtio-net-pci,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:00:12:34:56"
 
     echo "[*] Starting fakec2 on host-only network"
     echo "NOTE: There is no internet connection in this config"
