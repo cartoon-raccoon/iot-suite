@@ -18,7 +18,7 @@ fi
 exec qemu-system-aarch64 \
     -M virt -cpu cortex-a53 -smp 1 -kernel kernel.img \
     -append "rootwait root=/dev/vda console=ttyAMA0 quiet" \
-    --nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:04:12:34:56 \
+    -nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:04:12:34:56 \
     -serial mon:stdio -nographic \
     -drive file=rootfs.qcow2,if=none,format=qcow2,id=hd0 \
     -device virtio-blk-device,drive=hd0  ${EXTRA_ARGS}
