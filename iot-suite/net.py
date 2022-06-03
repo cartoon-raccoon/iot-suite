@@ -15,7 +15,6 @@ class Chain(Enum):
     OUTPUT = "OUTPUT"
 
 class IptablesRule:
-
     def __init__(self, chain: Chain, 
     target: str, target_args: list,
     dst_ip=None, src_ip = None,
@@ -39,8 +38,8 @@ class IptablesRule:
 
     def _base_insert(self, action):
         cmd = [
-            "iptables", "-t", self.table.value(),
-            action, self.chain.value()
+            "iptables", "-t", self.table.value,
+            action, self.chain.value
         ]
 
         if self.iface is not None:
@@ -68,10 +67,26 @@ class IptablesRule:
         cmd.extend(["-j", self.target])
         cmd.extend(self.target_args)
 
-        subprocess.run(cmd)
+        subprocess.run(cmd, check=True)
 
 class Net:
-    def __init__(self, bridge, ):
+    def __init__(self, bridge, dhcpconf, ipaddr):
+        self.bridge = bridge
+        self.dhcpconf = dhcpconf
+        self.ipaddr = ipaddr
+
+    def setup(self):
+        subprocess.run(["ip", "link", "add", self.bridge, "type", "bridge"])
+        subprocess.run(["ip", "link", "set", self.bridge, "up"])
+        subprocess.run(["ip", "addr", "add", 
+            f"{self.ipaddr}/24", "brd", "+", "dev", self.bridge])
+        subprocess.run(["dhcpd"])
+
+    def teardown(self):
+        # flush iptables
+        # kill dhcpd
+        # remove bridge interface
         pass
 
-    
+    def flush_iptables(table: Table):
+        subprocess.run(["iptables", "-t", table.value, "-F"])
