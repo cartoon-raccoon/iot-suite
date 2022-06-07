@@ -1,6 +1,6 @@
 from enum import Enum
 
-from config import MAC_ADDR, NIC_HELPER
+from config import CNC_MAC_ADDR, VM_MAC_ADDR, NIC_HELPER
 
 SUPPORTED_ARCHS = [
     "ARM",
@@ -19,7 +19,10 @@ class Arch(Enum):
     PPC = 5
     I386 = 6
     AMD64 = 7
-    UNKW = 8
+    # adding cnc here as an option so it can be invoked the same way as
+    # every other QEMU VM
+    CNC = 8
+    UNKW = 9
 
     def args(self, vmdir):
         
@@ -38,6 +41,7 @@ ARCH_CMDS = {
     Arch.PPC    : "qemu-system-ppc",
     Arch.I386   : "qemu-system-i386",
     Arch.AMD64  : "qemu-system-x86_64",
+    Arch.CNC    : "qemu-system-x86_64",
 }
 
 ARCH_ARGS = {
@@ -47,6 +51,19 @@ ARCH_ARGS = {
         "-dtb", "{}/versatile-pb.dtb",
         "-drive", "file={}/rootfs.qcow2,if=scsi,format=qcow2",
         "-append", "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
-        "-nic", "tap,model=rtl8139,helper={},mac={}".format(NIC_HELPER, MAC_ADDR)
-    ]
+        "-nic", "tap,model=rtl8139,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
+    ],
+    Arch.MIPS : [
+        "-M", "malta", "-cpu", "mips32r6-generic",
+        "-kernel", "{}/kernel.img"
+        "-drive", "file={}/rootfs.qcow2,format=qcow2",
+        "-append", "rootwait quiet root=/dev/sda",
+        "-nic", "tap,model=pcnet,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
+    ],
+    Arch.CNC : [
+        "-drive", "file={}/rootfs.qcow2,format=qcow2",
+        "-enable-kvm",
+        "-nic", "tap,model=virtio-net-pci,helper={},mac={}".format(NIC_HELPER, CNC_MAC_ADDR),
+        "-m", "2G", "-smp", "2",
+    ],
 }
