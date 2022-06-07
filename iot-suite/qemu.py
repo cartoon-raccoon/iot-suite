@@ -18,7 +18,7 @@ SUPPORTED_CMDS = ["quit", "loadvm", "savevm", "qmp_capabilities"]
 # path of the QMP socket
 QMP_PATH = "localhost"
 
-logger = logging.getLogger()
+logger = logging.getLogger("qemu")
 
 class QMPCommand:
     """
@@ -339,8 +339,8 @@ if __name__ == "__main__":
     logger.addHandler(handler)
 
     # suppress paramiko logging
-    logging.getLogger("paramiko").setLevel(logging.WARNING)
-    logging.getLogger("invoke").setLevel(logging.WARNING)
+    #logging.getLogger("paramiko").setLevel(logging.WARNING)
+    #logging.getLogger("invoke").setLevel(logging.WARNING)
 
     vm_config = QemuConfig(
         Arch.ARM, 

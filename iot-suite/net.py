@@ -1,5 +1,6 @@
 import subprocess
 from enum import Enum
+import invoke
 
 class Table(Enum):
     NAT = "nat"
@@ -70,23 +71,40 @@ class IptablesRule:
         subprocess.run(cmd, check=True)
 
 class Net:
+    """
+    Represents the network environment required to run the sandbox,
+    allowing communication with the fake C2 server and the sandbox VM.
+
+    It sets up the network environment, such as installing the bridge device,
+    manages the DHCP server and its configuration, as well as injecting and
+    flushing `iptables` rules.
+    """
     def __init__(self, bridge, dhcpconf, ipaddr):
         self.bridge = bridge
         self.dhcpconf = dhcpconf
         self.ipaddr = ipaddr
 
-    def setup(self):
-        subprocess.run(["ip", "link", "add", self.bridge, "type", "bridge"])
-        subprocess.run(["ip", "link", "set", self.bridge, "up"])
-        subprocess.run(["ip", "addr", "add", 
-            f"{self.ipaddr}/24", "brd", "+", "dev", self.bridge])
-        subprocess.run(["dhcpd"])
+    def setup(self, sudo_passwd):
+        invoke.sudo(f"ip link add {self.bridge} type bridge", password=sudo_passwd)
+        invoke.sudo(f"ip link set {self.bridge} up", password=sudo_passwd)
+        invoke.sudo(f"ip addr add {self.ipaddr}/24 brd + dev {self.bridge}", password=sudo_passwd)
 
-    def teardown(self):
+        self.dhcpd = subprocess.Popen(["sudo", "dhcpd"])
+
+        # subprocess.run(["ip", "link", "add", self.bridge, "type", "bridge"])
+        # subprocess.run(["ip", "link", "set", self.bridge, "up"])
+        # subprocess.run(["ip", "addr", "add", 
+        #     f"{self.ipaddr}/24", "brd", "+", "dev", self.bridge])
+        # subprocess.run(["dhcpd"])
+
+    def teardown(self, sudo_passwd):
         # flush iptables
         # kill dhcpd
         # remove bridge interface
-        pass
+        # todo: close the dhcpd popen
 
-    def flush_iptables(table: Table):
-        subprocess.run(["iptables", "-t", table.value, "-F"])
+        invoke.sudo(f"ip link set {self.bridge} down", password=sudo_passwd)
+        invoke.sudo(f"ip link delete {self.bridge} type bridge", password=sudo_passwd)
+
+    def flush_iptables(table: Table, sudo_passwd):
+        invoke.sudo(f"iptables -t {table.value} -F", password=sudo_passwd)
