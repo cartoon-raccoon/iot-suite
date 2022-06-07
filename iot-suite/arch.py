@@ -55,7 +55,14 @@ ARCH_ARGS = {
     ],
     Arch.MIPS : [
         "-M", "malta", "-cpu", "mips32r6-generic",
-        "-kernel", "{}/kernel.img"
+        "-kernel", "{}/kernel.img",
+        "-drive", "file={}/rootfs.qcow2,format=qcow2",
+        "-append", "rootwait quiet root=/dev/sda",
+        "-nic", "tap,model=pcnet,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
+    ],
+    Arch.MIPSEL : [
+        "-M", "malta", "-cpu", "mips32r6-generic",
+        "-kernel", "{}/kernel.img",
         "-drive", "file={}/rootfs.qcow2,format=qcow2",
         "-append", "rootwait quiet root=/dev/sda",
         "-nic", "tap,model=pcnet,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
