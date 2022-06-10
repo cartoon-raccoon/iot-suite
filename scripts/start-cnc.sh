@@ -27,6 +27,7 @@ cd $VM_FOLDER/cnc/
 exec qemu-system-x86_64 \
     -drive file=rootfs.qcow2,format=qcow2 \
     -enable-kvm \
-    -serial mon:stdio -nographic \
+    -serial stdio -nographic \
     -m 2G \
-    -smp 2 ${NET_ARGS}
+    -smp 2 ${NET_ARGS} \
+    -qmp tcp:localhost:4445,server,wait=off
