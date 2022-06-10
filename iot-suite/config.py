@@ -1,3 +1,6 @@
-MAC_ADDR = "52:54:01:12:34:56"
+CNC_MAC_ADDR = "52:54:00:12:34:56"
+VM_MAC_ADDR = "52:54:01:12:34:56"
 
 NIC_HELPER = "/usr/lib/qemu/qemu-bridge-helper"
+QMP_VM_PORT = 4444
+QMP_CNC_PORT = 4445
