@@ -1,7 +1,14 @@
 import subprocess
+from subprocess import PIPE
 from enum import Enum
 import invoke
+import logging
+import time
+import signal
 
+logger = logging.getLogger("net")
+
+SUDO_PASSWD = "03032001"
 class Table(Enum):
     NAT = "nat"
     MANGLE = "mangle"
@@ -85,26 +92,46 @@ class Net:
         self.ipaddr = ipaddr
 
     def setup(self, sudo_passwd):
+        logger.debug(f"adding bridge {self.bridge}")
         invoke.sudo(f"ip link add {self.bridge} type bridge", password=sudo_passwd)
+        
+        logger.debug(f"setting up bridge {self.bridge}")
         invoke.sudo(f"ip link set {self.bridge} up", password=sudo_passwd)
+
+        logger.debug(f"adding IP address to bridge {self.bridge}")
         invoke.sudo(f"ip addr add {self.ipaddr}/24 brd + dev {self.bridge}", password=sudo_passwd)
 
-        self.dhcpd = subprocess.Popen(["sudo", "dhcpd"])
+        logger.debug(f"starting dhcpd with configuration file {self.dhcpconf}")
+        self.dhcpd = subprocess.Popen(
+            ["dhcpd", "-f", "-cf", self.dhcpconf],
+            stdin=PIPE, stdout=PIPE, stderr=PIPE,
+        )
 
-        # subprocess.run(["ip", "link", "add", self.bridge, "type", "bridge"])
-        # subprocess.run(["ip", "link", "set", self.bridge, "up"])
-        # subprocess.run(["ip", "addr", "add", 
-        #     f"{self.ipaddr}/24", "brd", "+", "dev", self.bridge])
-        # subprocess.run(["dhcpd"])
+        time.sleep(1)
+        retcode = self.dhcpd.poll()
+        if retcode is not None:
+            logger.error(f"error: dhcpd exited with error code {retcode}")
 
     def teardown(self, sudo_passwd):
         # flush iptables
         # kill dhcpd
         # remove bridge interface
-        # todo: close the dhcpd popen
-
+        logger.debug("tearing down net")
         invoke.sudo(f"ip link set {self.bridge} down", password=sudo_passwd)
         invoke.sudo(f"ip link delete {self.bridge} type bridge", password=sudo_passwd)
+        self.dhcpd.terminate()
+        ret = self.dhcpd.wait()
+        logger.debug(f"dhcpd exited with {ret}")
+        logger.debug(self.dhcpd.stdout.read())
 
     def flush_iptables(table: Table, sudo_passwd):
         invoke.sudo(f"iptables -t {table.value} -F", password=sudo_passwd)
+
+if __name__ == "__main__":
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    logger.addHandler(handler)
+
+    net = Net("br0", "../configs/dhcpd.conf", "192.168.0.1")
+    net.setup(SUDO_PASSWD)
+    net.teardown(SUDO_PASSWD)
