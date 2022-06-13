@@ -1,3 +1,4 @@
+from re import I
 import pexpect
 import logging
 import shutil
@@ -17,6 +18,7 @@ ROOT_PROMPT = "# "
 SUPPORTED_CMDS = ["quit", "loadvm", "savevm", "qmp_capabilities"]
 # path of the QMP socket
 QMP_PATH = "localhost"
+QEMU_MONITOR_PROMPT = "(qemu)"
 
 logger = logging.getLogger("qemu")
 
@@ -57,13 +59,14 @@ class QemuConfig:
     """
     Configuration of a QEMU instance
     """
-    def __init__(self, arch: Arch, user, passwd, image, qmp_port, login_prompt):
+    def __init__(self, arch: Arch, user, passwd, image, qmp_port, login_prompt, qmp=False):
         self.arch = arch
         self.user = user
         self.passwd = passwd
         self.image = image
         self.qmp_port = qmp_port
         self.login_prompt = login_prompt
+        self.qmp = qmp
 
 class CmdResult:
     """
@@ -88,11 +91,16 @@ class Qemu:
     and returned as a `CmdResult`.
     """    
     def __init__(self, config: QemuConfig):
-        self._ADDITIONAL_ARGS = ["-nographic",
-            "-serial", "stdio",
-            "-qmp", f"tcp:{QMP_PATH}:{config.qmp_port},server,wait=off",
-        ]
-
+        if config.qmp:
+            self._ADDITIONAL_ARGS = ["-nographic",
+                "-serial", "stdio",
+                "-qmp", f"tcp:{QMP_PATH}:{config.qmp_port},server,wait=off",
+            ]
+        else:
+            self._ADDITIONAL_ARGS = ["-nographic",
+                "-serial", "mon:stdio",
+            ]
+        
         self.config = config
         self.started = False
         self.is_interactive = True
@@ -108,7 +116,7 @@ class Qemu:
         self._cmd_args = self.config.arch.args(vmdir)
         self.prompt = ROOT_PROMPT if self.config.user == "root" else USER_PROMPT
 
-    def interactive(self):
+    def interactive(self, ssh=None):
         """
         Starts an interactive QEMU session. This can be interacted with
         by the user.
@@ -207,11 +215,23 @@ class Qemu:
             return CmdResult(result.exited, output)
         
     def send_qmp_cmd(self, cmd):
-        if not cmd.supported():
+        if not cmd.supported() or not self.config.qmp:
             # todo: raise error
             return
         
         return self._send_qmp(cmd.to_json())
+
+    def send_qemu_command(self, cmd, args):
+        if self.config.qmp:
+            # todo: raise error
+            return
+        
+        to_send = f"{cmd} {' '.join(args)}"
+        self._enter_qemu_monitor()
+        self.proc.sendline(to_send)
+        self.proc.expect(QEMU_MONITOR_PROMPT)
+        logger.debug(f"{self.proc.before}")
+        self._exit_qemu_monitor()
 
     def stop(self):
         """
@@ -221,19 +241,24 @@ class Qemu:
 
         if self.ssh:
             self.conn.close()
-        
-        e = self.send_qmp_cmd(QMPCommand("quit"))
 
-        if not check_res_err(e):
-            # todo: raise error
-            logger.error(f"error: did not quit, received QEMU response {e}")
-            return
-        
-        self.qmp.shutdown(socket.SHUT_RDWR)
-        self.qmp.close()
+        if self.config.qmp:
+            e = self.send_qmp_cmd(QMPCommand("quit"))
 
-        self.proc.expect(pexpect.EOF)
-        self.started = False
+            if not check_res_err(e):
+                # todo: raise error
+                logger.error(f"error: did not quit, received QEMU response {e}")
+                return
+            
+            self.qmp.shutdown(socket.SHUT_RDWR)
+            self.qmp.close()
+
+            self.proc.expect(pexpect.EOF)
+            self.started = False
+
+        else:
+            self._enter_qemu_monitor()
+            self.proc.sendline("quit")
 
     def reset(self, tag):
         """
@@ -315,6 +340,24 @@ class Qemu:
         # there may be multiple items in the reply, so decode all and return
         # the first one (which is usually the most relevant)
         return replies[0]
+
+    def _enter_qemu_monitor(self):
+        self.proc.sendcontrol('a')
+        self.proc.send('c')
+
+        if self.proc.expect(QEMU_MONITOR_PROMPT) != 0:
+            # todo: raise error
+            logger.error("error: did not receive qemu prompt")
+            return
+
+    def _exit_qemu_monitor(self):
+        self.proc.sendcontrol('a')
+        self.proc.sendline('c')
+
+        if self.proc.expect(self.prompt) != 0:
+            # todo: raise error
+            logger.error("error: did not receive qemu prompt")
+            return
     
     def _startup(self):
         # set up the additional arguments needed to run the sandbox
@@ -326,7 +369,9 @@ class Qemu:
 
         # sleep for a second to give the VM time to start up the QMP server
         time.sleep(1)
-        self._init_qmp()
+        
+        if self.config.qmp:
+            self._init_qmp()
 
     def _construct_cmd(self):
         self._cmd_args.extend(self._ADDITIONAL_ARGS)
@@ -337,10 +382,6 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     logger.addHandler(handler)
-
-    # suppress paramiko logging
-    #logging.getLogger("paramiko").setLevel(logging.WARNING)
-    #logging.getLogger("invoke").setLevel(logging.WARNING)
 
     vm_config = QemuConfig(
         Arch.ARM, 
@@ -353,7 +394,7 @@ if __name__ == "__main__":
         Arch.CNC,
         "tester", "itestmalware",
         "../vms/cnc", 4445,
-        "iotsuite-c2 login: "
+        "iotsuite-c2 login: ", qmp=True
     )
 
     vm = Qemu(vm_config)
@@ -372,6 +413,8 @@ if __name__ == "__main__":
     logger.debug("running second test command")
     result2 = c2.run_cmd("ls")
     print(f'"{result2.output}"', result2.exitcode)
+
+    vm.send_qemu_command("savevm", ["loaded"])
 
     vm.stop()
     c2.stop()
