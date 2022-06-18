@@ -31,12 +31,12 @@ class Section:
     def __getitem__(self, item):
         # try to return the requested item
         try:
-            return self._section[item]
+            return self._section[item].strip('"')
         except KeyError:
             # if we can't find anything, check the global settings
             if self._global is not None:
                 try:
-                    return self._global[item]
+                    return self._global[item].strip('"')
                 except KeyError:
                     # nothing even in global settings, return None
                     return None
@@ -47,6 +47,21 @@ class Section:
 
     def item(self, item):
         return self[item]
+
+    def ssh(self):
+        """
+        Convenience method to check whether a Section has SSH enabled
+        """
+        return self._eval_true_or_false(self["SSH"])
+
+    def qmp(self):
+        """
+        Convenience method to check whether a Section has QMP enabled
+        """
+        return self._eval_true_or_false(self["QMP"])
+
+    def _eval_true_or_false(self, maybe):
+        return maybe is not None and maybe == "yes"
 
 class Config:
     def __init__(self, file):

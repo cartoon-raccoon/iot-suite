@@ -1,4 +1,3 @@
-from re import I
 import pexpect
 import logging
 import shutil
@@ -9,6 +8,7 @@ import sys
 
 from fabric import Connection
 
+from config import *
 from arch import Arch, ARCH_CMDS
 
 USER_PROMPT = "$ "
@@ -59,11 +59,16 @@ class QemuConfig:
     """
     Configuration of a QEMU instance
     """
-    def __init__(self, arch: Arch, user, passwd, image, qmp_port, login_prompt, qmp=False):
+    def __init__(self, arch: Arch, 
+        user, passwd, image, helper, mac,
+        login_prompt, qmp_port=None, qmp=False
+    ):
         self.arch = arch
         self.user = user
         self.passwd = passwd
         self.image = image
+        self.nic_helper = helper
+        self.macaddr = mac
         self.qmp_port = qmp_port
         self.login_prompt = login_prompt
         self.qmp = qmp
@@ -97,8 +102,8 @@ class Qemu:
                 "-qmp", f"tcp:{QMP_PATH}:{config.qmp_port},server,wait=off",
             ]
         else:
-            self._ADDITIONAL_ARGS = ["-nographic",
-                "-serial", "mon:stdio",
+            self._ADDITIONAL_ARGS = [
+                "-nographic", "-serial", "mon:stdio",
             ]
         
         self.config = config
@@ -113,8 +118,20 @@ class Qemu:
             logger.error("error: no command given")
             pass
 
-        self._cmd_args = self.config.arch.args(vmdir)
+        self._cmd_args = self.config.arch.args(vmdir, self.helper, self.macaddr)
         self.prompt = ROOT_PROMPT if self.config.user == "root" else USER_PROMPT
+
+    @property
+    def arch(self):
+        return self.config.arch
+
+    @property
+    def macaddr(self):
+        return self.config.macaddr
+
+    @property
+    def helper(self):
+        return self.config.nic_helper
 
     def interactive(self, ssh=None):
         """
@@ -383,18 +400,27 @@ if __name__ == "__main__":
     handler = logging.StreamHandler()
     logger.addHandler(handler)
 
+    config = Config("../configs/iotsuite.conf")
+
     vm_config = QemuConfig(
         Arch.ARM, 
-        "root", "toor", 
-        "../vms/arm", 4444, 
+        config.ARM["Username"],
+        config.ARM["Password"],
+        config.ARM["Image"],
+        config.NETWORK["NicHelper"],
+        config.ARM["MacAddr"],
         "iotsuite login: "
     )
 
     c2_config = QemuConfig(
         Arch.CNC,
-        "tester", "itestmalware",
-        "../vms/cnc", 4445,
-        "iotsuite-c2 login: ", qmp=True
+        config.CNC["Username"],
+        config.CNC["Password"],
+        "../vms/cnc", 
+        config.NETWORK["NicHelper"],
+        config.CNC["MacAddr"],
+        "iotsuite-c2 login: ", 
+        qmp_port=int(config.CNC["QMPPort"]), qmp=config.CNC.qmp()
     )
 
     vm = Qemu(vm_config)
