@@ -1,7 +1,5 @@
 from enum import Enum
 
-from config import CNC_MAC_ADDR, VM_MAC_ADDR, NIC_HELPER
-
 SUPPORTED_ARCHS = [
     "ARM",
     "MIPS",
@@ -24,7 +22,37 @@ class Arch(Enum):
     CNC = 8
     UNKW = 9
 
-    def args(self, vmdir):
+    def args(self, vmdir, helper, macaddr):
+        ARCH_ARGS = {
+            Arch.ARM : [
+                "-M", "versatilepb",
+                "-kernel", "{}/kernel.img",
+                "-dtb", "{}/versatile-pb.dtb",
+                "-drive", "file={}/rootfs.qcow2,if=scsi,format=qcow2",
+                "-append", "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
+                "-nic", f"tap,model=rtl8139,helper={helper},mac={macaddr}"
+            ],
+            Arch.MIPS : [
+                "-M", "malta", "-cpu", "mips32r6-generic",
+                "-kernel", "{}/kernel.img",
+                "-drive", "file={}/rootfs.qcow2,format=qcow2",
+                "-append", "rootwait quiet root=/dev/sda",
+                "-nic", f"tap,model=pcnet,helper={helper},mac={macaddr}"
+            ],
+            Arch.MIPSEL : [
+                "-M", "malta", "-cpu", "mips32r6-generic",
+                "-kernel", "{}/kernel.img",
+                "-drive", "file={}/rootfs.qcow2,format=qcow2",
+                "-append", "rootwait quiet root=/dev/sda",
+                "-nic", f"tap,model=pcnet,helper={helper},mac={macaddr}"
+            ],
+            Arch.CNC : [
+                "-drive", "file={}/rootfs.qcow2,format=qcow2",
+                "-enable-kvm",
+                "-nic", f"tap,model=virtio-net-pci,helper={helper},mac={macaddr}",
+                "-m", "2G", "-smp", "2",
+            ],
+        }        
         
         args = ARCH_ARGS[self]
 
@@ -42,35 +70,4 @@ ARCH_CMDS = {
     Arch.I386   : "qemu-system-i386",
     Arch.AMD64  : "qemu-system-x86_64",
     Arch.CNC    : "qemu-system-x86_64",
-}
-
-ARCH_ARGS = {
-    Arch.ARM : [
-        "-M", "versatilepb",
-        "-kernel", "{}/kernel.img",
-        "-dtb", "{}/versatile-pb.dtb",
-        "-drive", "file={}/rootfs.qcow2,if=scsi,format=qcow2",
-        "-append", "rootwait quiet root=/dev/sda console=ttyAMA0,115200",
-        "-nic", "tap,model=rtl8139,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
-    ],
-    Arch.MIPS : [
-        "-M", "malta", "-cpu", "mips32r6-generic",
-        "-kernel", "{}/kernel.img",
-        "-drive", "file={}/rootfs.qcow2,format=qcow2",
-        "-append", "rootwait quiet root=/dev/sda",
-        "-nic", "tap,model=pcnet,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
-    ],
-    Arch.MIPSEL : [
-        "-M", "malta", "-cpu", "mips32r6-generic",
-        "-kernel", "{}/kernel.img",
-        "-drive", "file={}/rootfs.qcow2,format=qcow2",
-        "-append", "rootwait quiet root=/dev/sda",
-        "-nic", "tap,model=pcnet,helper={},mac={}".format(NIC_HELPER, VM_MAC_ADDR)
-    ],
-    Arch.CNC : [
-        "-drive", "file={}/rootfs.qcow2,format=qcow2",
-        "-enable-kvm",
-        "-nic", "tap,model=virtio-net-pci,helper={},mac={}".format(NIC_HELPER, CNC_MAC_ADDR),
-        "-m", "2G", "-smp", "2",
-    ],
 }
