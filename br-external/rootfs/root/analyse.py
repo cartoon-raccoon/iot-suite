@@ -24,7 +24,9 @@ processes = dict()
 clean_ls = os.listdir()
 
 def kill(pid):
-    subprocess.run(["/bin/kill", "-sigkill", f"{pid}"])
+    subprocess.run(["/bin/kill", "-s", "sigkill", f"{pid}"], 
+        stdout=PIPE, stderr=PIPE
+    )
 
 def main():
     # get the file to analyse and restrict filename to 8 characters
@@ -60,7 +62,7 @@ def main():
     logger.debug("debug: running sample")
 
     for i in range(SECONDS_TO_RUN):
-        logger.debug(f"Seconds left: {SECONDS_TO_RUN - i}\r")
+        print(f"Seconds left: {SECONDS_TO_RUN - i}\r", end="")
         time.sleep(1)
     
     # terminate dumpcap and strace, wait and reap their exitcodes
@@ -91,10 +93,10 @@ def main():
             export_files.append(file)
 
     # output file names to be retrieved by iotftp
-    print("===== LIST OF FILES TO RETRIEVE =====")
+    print("\n===== LIST OF FILES TO RETRIEVE =====")
     for file in export_files:
         print(file)
-    print("===== END LIST =====")
+    print("===== END LIST =====\n")
 
     
 if __name__ == "__main__":
