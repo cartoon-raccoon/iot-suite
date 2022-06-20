@@ -8,7 +8,7 @@ import sys
 
 from fabric import Connection
 
-from config import *
+from config import Config
 from arch import Arch, ARCH_CMDS
 
 USER_PROMPT = "$ "
