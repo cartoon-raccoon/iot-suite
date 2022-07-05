@@ -1,6 +1,8 @@
 from configparser import ConfigParser
 import logging
 
+from arch import Arch
+
 logger = logging.getLogger("config")
 
 # Config sections
@@ -16,6 +18,33 @@ NETWORK = "NETWORK"
 IPTABLES = "IPTABLES"
 
 _ARCHS = [ARM, MIPS, MIPSEL, M68K, I386, AMD64]
+
+class QemuConfig:
+    """
+    Configuration of a QEMU instance
+    """
+    def __init__(self, arch: Arch, 
+        user, passwd, image, helper, mac,
+        login_prompt, qmp_port=None, qmp=False
+    ):
+        self.arch = arch
+        self.user = user
+        self.passwd = passwd
+        self.image = image
+        self.nic_helper = helper
+        self.macaddr = mac
+        self.qmp_port = qmp_port
+        self.login_prompt = login_prompt
+        self.qmp = qmp
+
+class NetConfig:
+    """
+    Class representing the configuration of a Net class.
+    """
+    def __init__(self, bridge, dhcpconf, ipaddr):
+        self.br = bridge
+        self.dhcp = dhcpconf
+        self.ipaddr = ipaddr
 
 class Section:
     """
@@ -115,16 +144,48 @@ class Config:
     @property
     def cnc(self):
         try:
-            return Section(self.CNC, CNC)
-        except AttributeError:
-            return None
+            cnc = self.CNC
+            net = self.NETWORK
 
-    @property
-    def sandbox(self):
+            return QemuConfig(
+                Arch.CNC,
+                cnc["Username"],
+                cnc["Password"],
+                cnc["Image"],
+                net["NicHelper"],
+                cnc["MacAddr"],
+                cnc["LoginPrompt"],
+                qmp_port=int(cnc["QMPPort"]),qmp=cnc.qmp()
+            )
+        except AttributeError as e:
+            raise e
+
+    def sandbox(self, arch):
         try:
-            return Section(self.SANDBOX, SANDBOX)
-        except AttributeError:
-            return None
+            net = self.NETWORK
+            arch_config = self.arch(arch)
+
+            if arch_config is None:
+                logger.error("error: settings for required arch not present in config")
+                return None
+
+            try:
+                qmp_port = int(arch_config["QMPPort"])
+            except TypeError:
+                qmp_port = None
+
+            return QemuConfig(
+                arch,
+                arch_config["Username"],
+                arch_config["Password"],
+                arch_config["Image"],
+                net["NicHelper"],
+                arch_config["MacAddr"],
+                arch_config["LoginPrompt"],
+                qmp_port=qmp_port, qmp=arch_config.qmp()
+            )
+        except AttributeError as e:
+            raise e
     
     def arch(self, arch):
         try:
