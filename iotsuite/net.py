@@ -1,10 +1,8 @@
-import subprocess
-from subprocess import PIPE
 from enum import Enum
 import invoke
 import logging
-import time
-import signal
+
+from config import NetConfig
 
 logger = logging.getLogger("net")
 
@@ -76,15 +74,6 @@ class IptablesRule:
         cmd.extend(self.target_args)
 
         invoke.sudo(' '.join(cmd))
-
-class NetConfig:
-    """
-    Class representing the configuration of a Net class.
-    """
-    def __init__(self, bridge, dhcpconf, ipaddr):
-        self.br = bridge
-        self.dhcp = dhcpconf
-        self.ipaddr = ipaddr
 
 class Net:
     """

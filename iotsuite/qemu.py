@@ -8,7 +8,7 @@ import sys
 
 from fabric import Connection
 
-from config import Config
+from config import Config, QemuConfig
 from arch import Arch, ARCH_CMDS
 
 USER_PROMPT = "$ "
@@ -54,24 +54,6 @@ class QMPCommand:
 
 def check_res_err(res):
     return "return" in res and not res["return"]
-
-class QemuConfig:
-    """
-    Configuration of a QEMU instance
-    """
-    def __init__(self, arch: Arch, 
-        user, passwd, image, helper, mac,
-        login_prompt, qmp_port=None, qmp=False
-    ):
-        self.arch = arch
-        self.user = user
-        self.passwd = passwd
-        self.image = image
-        self.nic_helper = helper
-        self.macaddr = mac
-        self.qmp_port = qmp_port
-        self.login_prompt = login_prompt
-        self.qmp = qmp
 
 class CmdResult:
     """
@@ -195,9 +177,17 @@ class Qemu:
             self.stop()
             sys.exit(1)
 
-    def run_cmd(self, cmd):
+    # def expect(self, pattern):
+    #     if self.proc.expect(f"{self.prompt}") != 0:
+    #         return Cmd
+
+    def run_cmd(self, cmd, wait=True):
         """
         Run a command on the sandbox VM. This is used by a non-interactive session.
+
+        `wait` determines whether or not the Qemu controller waits for the command
+        to complete. Setting it to `False` allows the user to expect custom output from
+        the command before waiting it for completion.
         """
         if not self._check_started():
             # todo: raise error
