@@ -167,13 +167,27 @@ class Config:
 
     @property
     def network(self):
+        """
+        Returns a complete `NetConfig` parsed from the config file.
+
+        Returns None if the NETWORK section does not exist.
+        """
         try:
-            return Section(self.NETWORK, NETWORK)
+            net = self.NETWORK
+            
+            return NetConfig(
+                net["BridgeName"],
+                net["DHCPConf"],
+                net["IpAddr"]
+            )
         except AttributeError:
             return None
     
     @property
     def cnc(self):
+        """
+        Returns a complete configuration for the CNC VM.
+        """
         try:
             cnc = self.CNC
             net = self.NETWORK
