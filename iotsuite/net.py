@@ -21,28 +21,69 @@ class Chain(Enum):
     OUTPUT = "OUTPUT"
 
 class IptablesRule:
+    """
+    A class representing an `iptables` rule managed by IotSuite.
+    """
+
     def __init__(self, chain: Chain, 
     target: str, target_args: list,
     dst_ip=None, src_ip = None,
     iface=None,
     protocol=None, dport=None, sport=None,
     table=Table.FILTER):
+        """
+        Constructs the `iptables` rule.
+
+        Required arguments are:
+
+        - `chain`
+        - `target` - the action to take.
+        - `target_args` - all arguments to add to the target.
+
+        This should be a list
+
+        Other optional arguments are:
+
+        - `dst_ip` and `src_ip` - These should be strings.
+        - `iface` - The network interface for `iptables` to listen on.
+        - `protocol` - The protocol for `iptables` to filter by.
+        - `dport` and `sport` - These should be integers.
+        - `table` - The table to insert the `iptables` rule in. Like
+        `iptables`, if no table is specified, this defaults to `FILTER`.
+        """
         self.table = table
         self.chain = chain
         self.target = target
         self.target_args = target_args
         self.dst_ip, self.src_ip = dst_ip, src_ip
         self.iface = iface
-        self.protocol = protocol,
+        self.protocol = protocol
         self.dport, self.sport = dport, sport
 
+    def __str__(self):
+        """
+        Constructs the rule with the append action (`-A`).
+        """
+        return ' '.join(self._construct_cmd("-A"))
+
     def insert(self):
+        """
+        Runs `iptables` to insert the rule (using option `-I`).
+        """
         self._base_insert("-I")
     
     def append(self):
+        """
+        Runs `iptables` to append the rule (using option `-A`).
+        """
         self._base_insert("-A")
 
     def _base_insert(self, action):
+        cmd = self._construct_cmd(action)
+
+        invoke.sudo(' '.join(cmd))
+
+    def _construct_cmd(self, action):
         cmd = [
             "iptables", "-t", self.table.value,
             action, self.chain.value
@@ -73,7 +114,7 @@ class IptablesRule:
         cmd.extend(["-j", self.target])
         cmd.extend(self.target_args)
 
-        invoke.sudo(' '.join(cmd))
+        return cmd
 
 class Net:
     """
@@ -85,6 +126,9 @@ class Net:
     flushing `iptables` rules.
     """
     def __init__(self, config: NetConfig):
+        """
+        Accepts a `NetConfig` to set up the network infrastructure.
+        """
         self.bridge = config.br
         self.dhcpconf = config.dhcp
         self.ipaddr = config.ipaddr
