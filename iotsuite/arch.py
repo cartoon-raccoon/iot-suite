@@ -1,28 +1,44 @@
 from enum import Enum
 
+#* Names as defined in PyELFTools.
+#! Changing these strings will break IoTSuite!
 SUPPORTED_ARCHS = [
     "ARM",
-    "MIPS",
+    "MIPS", # MIPSEL is MIPS with little endian variant
     "Motorola 68000",
     "PowerPC",
     "x86",
     "x64",
 ]
 
+def supports(arch):
+    """
+    Checks whether an architecture is supported.
+    """
+    return arch in SUPPORTED_ARCHS
+
 class Arch(Enum):
-    ARM = 1
-    MIPS = 2
-    MIPSEL = 3
-    M68K = 4
-    PPC = 5
-    I386 = 6
-    AMD64 = 7
+    """
+    An Enum with variants representing each architecture supported by
+    IotSuite.
+    """
+
+    ARM = "ARM"
+    MIPS = "MIPS"
+    MIPSEL = "MIPSEL"
+    M68K = "M68K"
+    PPC = "PPC"
+    I386 = "I386"
+    AMD64 = "AMD64"
     # adding cnc here as an option so it can be invoked the same way as
     # every other QEMU VM
-    CNC = 8
-    UNKW = 9
+    CNC = "CNC"
+    UNKW = 0
 
     def args(self, vmdir, helper, macaddr):
+        """
+        Returns the command line arguments for invoking QEMU for the architecture.
+        """
         ARCH_ARGS = {
             Arch.ARM : [
                 "-M", "versatilepb",
