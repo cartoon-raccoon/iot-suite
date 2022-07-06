@@ -12,21 +12,35 @@ ARM = "ARM"
 MIPS = "MIPS"
 MIPSEL = "MIPSEL"
 M68K = "M68K"
+PPC = "POWERPC"
 I386 = "I386"
 AMD64 = "AMD64"
 NETWORK = "NETWORK"
 IPTABLES = "IPTABLES"
 
-_ARCHS = [ARM, MIPS, MIPSEL, M68K, I386, AMD64]
+_ARCHS = [ARM, MIPS, MIPSEL, M68K, PPC, I386, AMD64]
 
 class QemuConfig:
     """
-    Configuration of a QEMU instance
+    Class representing the configuration of a QEMU instance.
     """
     def __init__(self, arch: Arch, 
         user, passwd, image, helper, mac,
         login_prompt, qmp_port=None, qmp=False
     ):
+        """
+        The following arguments are required:
+
+        - `arch` - The architecture of the instance.
+        - `user` and `passwd` - The user to log in as and its password.
+        - `image` - The directory containing the VM image files.
+        - `helper` - The NIC helper to use for setting up the TAP devices.
+        - `mac` - The MAC address to start the VM with.
+        - `login_prompt` - The login prompt to expect for to send the password.
+        
+        The other two optional arguments concern QMP settings. These default to `None`
+        and False respectively, as sandbox VMs should not make use of QMP.
+        """
         self.arch = arch
         self.user = user
         self.passwd = passwd
@@ -42,6 +56,13 @@ class NetConfig:
     Class representing the configuration of a Net class.
     """
     def __init__(self, bridge, dhcpconf, ipaddr):
+        """
+        The three arguments to this function should all be strings.
+
+        - `bridge` - The name of the bridge interface to use.
+        - `dhcpconf` - The path to the dhpcd config file.
+        - `ipaddr` - The IP address of the bridge interface.
+        """
         self.br = bridge
         self.dhcp = dhcpconf
         self.ipaddr = ipaddr
@@ -75,17 +96,20 @@ class Section:
                 return None
 
     def item(self, item):
+        """
+        Convenience method for returning configuration items.
+        """
         return self[item]
 
     def ssh(self):
         """
-        Convenience method to check whether a Section has SSH enabled
+        Convenience method to check whether a Section has SSH enabled.
         """
         return self._eval_true_or_false(self["SSH"])
 
     def qmp(self):
         """
-        Convenience method to check whether a Section has QMP enabled
+        Convenience method to check whether a Section has QMP enabled.
         """
         return self._eval_true_or_false(self["QMP"])
 
@@ -120,6 +144,8 @@ class Config:
     @property
     def vm_qmp_port(self):
         """
+        Gets the QMP port used by the sandbox VM.
+
         Returns None if no global port is set.
         """
         try:
@@ -129,6 +155,11 @@ class Config:
 
     @property
     def c2_qmp_port(self):
+        """
+        Gets the QMP port used by the C2 VM.
+
+        Returns None if no global port is set.
+        """
         try:
             return int(self[CNC]["QMPPort"])
         except KeyError:
@@ -160,10 +191,14 @@ class Config:
         except AttributeError as e:
             raise e
 
-    def sandbox(self, arch):
+    def sandbox(self, arch: Arch):
+        """
+        Constructs a `QemuConfig` based on the `Arch` passed to it with all
+        the requisite attributes and fields set.
+        """
         try:
             net = self.NETWORK
-            arch_config = self.arch(arch)
+            arch_config = self.arch(arch.value)
 
             if arch_config is None:
                 logger.error("error: settings for required arch not present in config")
@@ -187,7 +222,13 @@ class Config:
         except AttributeError as e:
             raise e
     
-    def arch(self, arch):
+    def arch(self, arch: str):
+        """
+        Returns the configuration settings for the architecture specified.
+        The parameter has to be a string or the function will return None.
+
+        Returns None if the configuration section does not exist.
+        """
         try:
             return Section(self.cp[arch], arch, self.SANDBOX)
         except KeyError:
