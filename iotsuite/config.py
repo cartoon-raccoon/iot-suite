@@ -70,7 +70,24 @@ class NetConfig:
 
 class Section:
     """
-    Wraps a ConfigParser section proxy to provide access to configs
+    Wraps a `ConfigParser` section proxy to provide access to config sections.
+
+    A `Section` represents a section in the configuration file, such as
+    `GENERAL` or `NETWORK`, and is automatically created when a configuration
+    file is parsed. A `Section` should not be directly created; instead, it
+    should be accessed from the main `Config` class as an attribute.
+    
+    The `__getitem__` method has been overloaded to return the value of 
+    the associated configuration key when a `Section` instance is subscripted.
+
+    # Example
+
+    ```python
+    conf = Config("/path/to/config/file.conf")
+
+    # access the 'Username' key through a subscript
+    user = conf.SANDBOX["Username"]
+    ```
     """
     def __init__(self, section, _ty, _global=None):
         self._section = section
@@ -80,6 +97,14 @@ class Section:
         self._global = _global
 
     def __getitem__(self, item):
+        """
+        Returns the value of the `item` key in the section.
+        Returns `NoneType` if the key does not exist.
+
+        `item` should normally be a string, but this method will
+        accept any type accepted by `ConfigParser`'s `__getitem__`
+        implementation.
+        """
         # try to return the requested item
         try:
             return self._section[item].strip('"')
@@ -118,13 +143,50 @@ class Section:
         return maybe is not None and maybe == "yes"
 
 class Config:
+    """
+    A class representing the global configuration for IotSuite.
+
+    This class wraps a `ConfigParser` that is used to directly parse
+    the configuration file, and adds additional logic and method
+    overloading to present an API that most suits the use case of
+    IoTSuite.
+
+    At initialization, the configuration file is validated and parsed
+    into 4 main sections:
+
+    - `GENERAL`, containing general uncategorized settings;
+    - `CNC`, containing configuration settings for the fake
+    C2 VM;
+    - `SANDBOX`, containing general configuration settings for the
+    sandbox VM;
+    - `NETWORK`, containing configuration settings for the network
+    environment constructed for the VMs to interact, as well as
+    configuration settings for the custom file transfer protocol
+    used by IoTSuite.
+
+    Each architecture supported by IoTSuite also has its own section,
+    but these sections are not compulsory. The main purpose of these
+    sections is to allow the user to define specific configurations for
+    a specific architecture. All configuration settings accepted in
+    `SANDBOX` will be overidden by the ones in these sections.
+
+    For details on the API, see the methods.
+    """
+
     def __init__(self, file):
+        """
+        Create a new instance of `Config` with a provided file path.
+        """
         self.cp = ConfigParser()
         self.cp.read(file)
 
         self.parse_config()
 
     def __getitem__(self, item):
+        """
+        This method is bad code and should not be used. It will either
+        be fixed or removed in the future.
+        """
         # todo:
         # for sandbox, if global scope is given but does not exist,
         # return None
@@ -250,6 +312,26 @@ class Config:
             return None
 
     def parse_config(self):
+        """
+        This method validates and wraps `ConfigParser` functionality
+        to create the API for `Config`.
+
+        This method creates four main attributes: `GENERAL`, `CNC`, `SANDBOX`,
+        and `NETWORK`, and a similar attribute for every architecture-specific
+        section defined in the config file. These attributes can be accessed like
+        any other attribute.
+
+        # Example
+        ```python
+        # to get the sandbox section
+        conf = Config("/path/to/config/file.conf")
+
+        sandbox = conf.SANDBOX
+        ```
+
+        This yields a `Section` instance that can be subscripted to retrieve
+        an arbitrary configuration key. See `Section` for more details.
+        """
 
         if not self._validate_config():
             # todo: raise error
