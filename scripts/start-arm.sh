@@ -12,7 +12,7 @@ cd $VM_FOLDER/arm/
 if [[ $1 == "--ssh-only" ]]; then
 	EXTRA_ARGS=""
 else
-	EXTRA_ARGS="-serial stdio"
+	EXTRA_ARGS="-serial mon:stdio"
 fi
 
 # if ! [ -f /tmp/guest.in ] || [ -f /tmp/guest.out ]; then
@@ -26,6 +26,6 @@ exec qemu-system-arm \
 	-drive file=rootfs.qcow2,if=scsi,format=qcow2 \
 	-append "rootwait quiet root=/dev/sda console=ttyAMA0,115200" \
 	-nic tap,model=rtl8139,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:01:12:34:56 \
-	-nographic ${EXTRA_ARGS} -qmp tcp:localhost:4444,server,wait=off
+	-nographic ${EXTRA_ARGS} #-qmp tcp:localhost:4444,server,wait=off
 
 	#-net hostfwd=tcp::5555-:22,hostfwd=tcp::5554-:21 \
