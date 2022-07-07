@@ -7,6 +7,7 @@ import time
 import sys
 
 from fabric import Connection
+from invoke.exceptions import UnexpectedExit
 
 from config import Config, QemuConfig
 from arch import Arch, ARCH_CMDS
@@ -217,7 +218,11 @@ class Qemu:
 
             return CmdResult(exitcode, output)
         else:
-            result = self.conn.run(cmd, hide=True)
+            # todo: catch unexpected exit and return CmdResult properly
+            try:
+                result = self.conn.run(cmd, hide=True)
+            except UnexpectedExit as e:
+                result = e.result
             output = result.stdout if result.exited == 0 else result.stderr
             return CmdResult(result.exited, output)
         
@@ -226,18 +231,20 @@ class Qemu:
             # todo: raise error
             return
         
+        logger.debug(f"sending QMP command {cmd.execute}")
         return self._send_qmp(cmd.to_json())
 
     def send_qemu_command(self, cmd, args):
         if self.config.qmp:
             # todo: raise error
             return
+
+        logger.debug(f"sending QEMU monitor command {cmd} with args {args}")
         
         to_send = f"{cmd} {' '.join(args)}"
         self._enter_qemu_monitor()
         self.proc.sendline(to_send)
         self.proc.expect(QEMU_MONITOR_PROMPT)
-        logger.debug(f"{self.proc.before}")
         self._exit_qemu_monitor()
 
     def stop(self):
@@ -271,7 +278,10 @@ class Qemu:
         """
         Reset the VM to a clean instance.
         """
-        self.send_qmp_cmd(QMPCommand("loadvm", tag=tag))
+        if self.config.qmp:
+            self.send_qmp_cmd(QMPCommand("loadvm", tag=tag))
+        else:
+            self.send_qemu_command("loadvm", [tag])
 
     def snapshot(self, tag):
         """
