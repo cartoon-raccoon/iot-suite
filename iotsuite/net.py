@@ -6,7 +6,6 @@ from config import NetConfig
 
 logger = logging.getLogger("net")
 
-SUDO_PASSWD = "03032001"
 class Table(Enum):
     NAT = "nat"
     MANGLE = "mangle"
@@ -172,10 +171,11 @@ class Net:
         rule.append()
         self.iptables.append(rule)
 
-    def flush_iptables(table: Table, sudo_passwd):
+    def flush_iptables(self, sudo_passwd, table=Table.FILTER):
         invoke.sudo(f"iptables -t {table.value} -F", password=sudo_passwd)
 
 if __name__ == "__main__":
+    SUDO_PASSWD = "03032001"
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     logger.addHandler(handler)
