@@ -6,6 +6,7 @@ from arch import Arch
 logger = logging.getLogger("config")
 
 # Config sections
+GENERAL = "GENERAL"
 CNC = "CNC"
 SANDBOX = "SANDBOX"
 ARM = "ARM"
@@ -255,6 +256,7 @@ class Config:
             logger.error("error: invalid config")
             return
 
+        setattr(self, GENERAL, Section(self.cp[GENERAL], GENERAL))
         setattr(self, CNC, Section(self.cp[CNC], CNC))
         setattr(self, SANDBOX, Section(self.cp[SANDBOX], SANDBOX))
         setattr(self, NETWORK, Section(self.cp[NETWORK], NETWORK))
@@ -271,6 +273,7 @@ class Config:
     # todo: check that all ports are valid integers
     def _validate_config(self):
         try:
+            _ = self.cp[GENERAL]
             _ = self.cp[CNC]
             _ = self.cp[SANDBOX]
             _ = self.cp[NETWORK]
