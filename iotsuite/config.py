@@ -7,6 +7,8 @@ logger = logging.getLogger("config")
 
 # Config sections
 GENERAL = "GENERAL"
+STATIC = "STATIC"
+HEURISTICS = "HEURISTICS"
 CNC = "CNC"
 SANDBOX = "SANDBOX"
 ARM = "ARM"
@@ -20,6 +22,7 @@ NETWORK = "NETWORK"
 IPTABLES = "IPTABLES"
 
 _ARCHS = [ARM, MIPS, MIPSEL, M68K, PPC, I386, AMD64]
+_REQUIRED = [GENERAL, STATIC, HEURISTICS, CNC, SANDBOX, NETWORK]
 
 class QemuConfig:
     """
@@ -68,6 +71,19 @@ class NetConfig:
         self.dhcp = dhcpconf
         self.ipaddr = ipaddr
 
+class InvalidConfig(Exception):
+    """
+    Exception raised when a Config is invalid.
+    """
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __repr__(self):
+        return f"InvalidConfig('{self.msg}')"
+
+    def __str__(self):
+        return self.msg
+
 class Section:
     """
     Wraps a `ConfigParser` section proxy to provide access to config sections.
@@ -88,6 +104,8 @@ class Section:
     # access the 'Username' key through a subscript
     user = conf.SANDBOX["Username"]
     ```
+
+    All returned attributes will be strings; no integer parsing is performed.
     """
     def __init__(self, section, _ty, _global=None):
         self._section = section
@@ -131,16 +149,22 @@ class Section:
         """
         Convenience method to check whether a Section has SSH enabled.
         """
-        return self._eval_true_or_false(self["SSH"])
+        return self.check_enabled("SSH")
 
     def qmp(self):
         """
         Convenience method to check whether a Section has QMP enabled.
         """
-        return self._eval_true_or_false(self["QMP"])
+        return self.check_enabled("QMP")
 
-    def _eval_true_or_false(self, maybe):
-        return maybe is not None and maybe == "yes"
+    def check_enabled(self, maybe):
+        """
+        Convenience method to check whether a Section has a particular key enabled.
+        """
+        maybe = self[maybe].lower()
+
+        return maybe is not None \
+        and (maybe == "yes" or maybe == "true")
 
 class Config:
     """
@@ -152,9 +176,11 @@ class Config:
     IoTSuite.
 
     At initialization, the configuration file is validated and parsed
-    into 4 main sections:
+    into the following main sections:
 
     - `GENERAL`, containing general uncategorized settings;
+    - `STATIC`, containing settings for static analysis;
+    - `HEURISTICS`, containing settings for analysis of the collected data;
     - `CNC`, containing configuration settings for the fake
     C2 VM;
     - `SANDBOX`, containing general configuration settings for the
@@ -278,8 +304,7 @@ class Config:
             arch_config = self.arch(arch.value)
 
             if arch_config is None:
-                logger.error("error: settings for required arch not present in config")
-                return None
+                raise InvalidConfig("settings for required arch not present in config")
 
             try:
                 qmp_port = int(arch_config["QMPPort"])
@@ -297,6 +322,8 @@ class Config:
                 qmp_port=qmp_port, qmp=arch_config.qmp()
             )
         except AttributeError as e:
+            logger.error("attribute error when creating sandbox config")
+            logger.error("this is a bug. please contact the developer.")
             raise e
     
     def arch(self, arch: str):
@@ -313,17 +340,21 @@ class Config:
 
     def parse_config(self):
         """
-        This method validates and wraps `ConfigParser` functionality
-        to create the API for `Config`.
+        This method is called automatically on initialization. It validates
+        the configuration and wraps `ConfigParser` functionality to create
+        the API for `Config`. If any required sections do not exist,
+        this method will raise an `InvalidConfig` exception.
 
-        This method creates four main attributes: `GENERAL`, `CNC`, `SANDBOX`,
-        and `NETWORK`, and a similar attribute for every architecture-specific
-        section defined in the config file. These attributes can be accessed like
-        any other attribute.
+        This method creates six main attributes: `GENERAL`, `STATIC`, `CNC`, 
+        `HEURISTICS`, `SANDBOX`, and `NETWORK`, and a similar attribute for 
+        every architecture-specific section defined in the config file. 
+        These attributes can be accessed like any other attribute.
 
         # Example
+
         ```python
         # to get the sandbox section
+        # parse_config is called automatically to validate and construct the config
         conf = Config("/path/to/config/file.conf")
 
         sandbox = conf.SANDBOX
@@ -333,12 +364,16 @@ class Config:
         an arbitrary configuration key. See `Section` for more details.
         """
 
-        if not self._validate_config():
-            # todo: raise error
-            logger.error("error: invalid config")
-            return
+        #todo: check for iptables (not required but add section for it if exists)
+
+        result = self._validate_config()
+
+        if result is not None:
+            raise InvalidConfig(f"invalid configuration: missing required section '{result}'")
 
         setattr(self, GENERAL, Section(self.cp[GENERAL], GENERAL))
+        setattr(self, STATIC, Section(self.cp[STATIC], STATIC))
+        setattr(self, HEURISTICS, Section(self.cp[HEURISTICS], HEURISTICS))
         setattr(self, CNC, Section(self.cp[CNC], CNC))
         setattr(self, SANDBOX, Section(self.cp[SANDBOX], SANDBOX))
         setattr(self, NETWORK, Section(self.cp[NETWORK], NETWORK))
@@ -352,14 +387,11 @@ class Config:
 
     # check that all required sections are present
     # architecture-specific sections are optional
-    # todo: check that all ports are valid integers
     def _validate_config(self):
-        try:
-            _ = self.cp[GENERAL]
-            _ = self.cp[CNC]
-            _ = self.cp[SANDBOX]
-            _ = self.cp[NETWORK]
-
-            return True
-        except KeyError:
-            return False
+        for section in _REQUIRED:
+            try:
+                _ = self.cp[section]
+            except KeyError:
+                return section
+        
+        return None
