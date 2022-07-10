@@ -161,10 +161,10 @@ class Section:
         """
         Convenience method to check whether a Section has a particular key enabled.
         """
-        maybe = self[maybe].lower()
+        maybe = self[maybe]
 
         return maybe is not None \
-        and (maybe == "yes" or maybe == "true")
+        and (maybe.lower() == "yes" or maybe.lower() == "true")
 
 class Config:
     """
@@ -325,6 +325,10 @@ class Config:
             logger.error("attribute error when creating sandbox config")
             logger.error("this is a bug. please contact the developer.")
             raise e
+
+    def iptables(self):
+        #todo: parse iptables and return a list of IptablesRule
+        return []
     
     def arch(self, arch: str):
         """
