@@ -56,6 +56,22 @@ class QMPCommand:
 def check_res_err(res):
     return "return" in res and not res["return"]
 
+class QemuError(Exception):
+    """
+    An exception raised when there is an error condition in the execution
+    of the Qemu controller.
+
+    Note that commands that exit with a non-zero error code do not raise this
+    exception, they are returned as a `CmdResult` with an exitcode > 0. This
+    exception pertains to error conditions in the running of the controller and
+    the VM it controls.
+    """
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return f"{self.msg}"
+
 class CmdResult:
     """
     Result of a command run on the sandbox VM
@@ -77,6 +93,11 @@ class Qemu:
     controlled programmatically. Commands can be sent via the `run_cmd` method
     and the exitcode as well as any program output will be piped back
     and returned as a `CmdResult`.
+
+    Qemu objects in noninteractive mode can also have commands be run 
+    asynchronously and waited for when the result is needed. This allows other 
+    code to be run between executing the command and reaping the result, or custom
+    input to be sent to the command if needed.
     """    
     def __init__(self, config: QemuConfig):
         if config.qmp:
@@ -101,9 +122,7 @@ class Qemu:
         vmdir= self.config.image
         self._cmd = shutil.which(ARCH_CMDS[self.config.arch])
         if self._cmd is None:
-            # todo: return error
-            logger.error("error: no command given")
-            pass
+            raise QemuError(f"no qemu system executable for arch '{self.config.arch}'")
 
         self._cmd_args = self.config.arch.args(vmdir, self.helper, self.macaddr)
         self.prompt = ROOT_PROMPT if self.config.user == "root" else USER_PROMPT
@@ -136,8 +155,7 @@ class Qemu:
         (str, int) indicating the remote ip/domain and port number.
         """
         if self.started:
-            # todo: raise error
-            return
+            raise QemuError("QEMU controller already running")
         
         self._startup()
 
@@ -158,33 +176,23 @@ class Qemu:
         and should not be called by the end user.
         """
         if not self._check_started():
-            # todo: raise error
-            logger.error("error: qemu instance not started")
-            return
+            raise QemuError("QEMU instance not started")
 
         self._expect_login_prompt(login_prompt)
         
         logger.debug("sending user")
         self.proc.sendline(f"{self.config.user}")
         if self.proc.expect("Password: ") != 0:
-            # todo: raise error, stop instance from calling function
-            logger.error("error: did not receive password prompt")
-            self.stop()
-            return
+            # todo: stop instance from calling function
+            raise QemuError("did not receive password prompt")
 
         logger.debug("sending password")
         self.proc.sendline(f"{self.config.passwd}")
         try:
             self.proc.expect(f"{self.prompt}")
         except:
-            # todo: raise error instead of exiting
-            logger.error(f"error: could not login: got '{self.proc.before}'")
-            self.stop()
-            sys.exit(1)
-
-    # def expect(self, pattern):
-    #     if self.proc.expect(f"{self.prompt}") != 0:
-    #         return Cmd
+            # todo: stop instance from calling function
+            raise QemuError(f"could not login: got '{self.proc.before}'")
 
     def run_cmd(self, cmd, wait=True):
         """
@@ -192,7 +200,10 @@ class Qemu:
 
         `wait` determines whether or not the Qemu controller waits for the command
         to complete. Setting it to `False` allows the user to expect custom output from
-        the command or run additional operations before waiting it for completion.
+        the command or run additional operations before waiting it for completion. If
+        `wait` is set to `True`, the command is waited for immediately after invocation
+        and a `CmdResult` is directly returned. Else, `None` is returned, and the command
+        has to be reaped via `wait_existing()`.
 
         Important to note is that `wait` does not allow `Qemu` to run multiple commands
         simultaneously. Due to the synchronous nature of the data collection procedure,
@@ -201,9 +212,7 @@ class Qemu:
         additional work on a currently running command.
         """
         if not self._check_started():
-            # todo: raise error
-            logger.error("error: could not run cmd: VM not started")
-            sys.exit(1)
+            raise QemuError("could not run cmd: VM not started")
 
         if not self.ssh:
         
@@ -230,11 +239,14 @@ class Qemu:
         """
         Wait on a currently running command.
         """
+        if self.awaiting is None:
+            raise QemuError("no currently running command")
+        
         if not self.ssh:
             #? confirm that this check is the proper way to do this
             if self.proc.expect(f"{self.prompt}") != 0:
-                # todo: raise error
-                return CmdResult(1, "")
+                # todo: provide additional info
+                raise QemuError("error while expecting command prompt")
 
             output = self.proc.before
             
@@ -242,7 +254,7 @@ class Qemu:
             #? same for this one
             if self.proc.expect(self.prompt) != 0:
                 # todo: raise error
-                return CmdResult(1, "")
+                raise QemuError("error while expecting command prompt")
 
             exitcode = int(
                 self.proc.before.split(b'\r\r\n')[1].decode("ascii")
@@ -266,9 +278,11 @@ class Qemu:
             return CmdResult(result.exited, output.strip())
         
     def send_qmp_cmd(self, cmd):
-        if not cmd.supported() or not self.config.qmp:
-            # todo: raise error
-            return
+        if not cmd.supported():
+            raise QemuError(f"QMP command {cmd.execute} is not supported")
+
+        if not self.config.qmp:
+            raise QemuError("QEMU controller is not configured for QMP")
         
         logger.debug(f"sending QMP command {cmd.execute}")
         return self._send_qmp(cmd.to_json())
@@ -292,10 +306,14 @@ class Qemu:
         """
         logger.debug("stopping QEMU VM")
 
-        if self.awaiting is not None:
-            # todo: raise error
-            logger.error("error: qemu is still awaiting command")
+
+        if not self._check_started():
+            # if not started, don't do anything
+            logger.debug("QEMU process not started, returning")
             return
+
+        if self.awaiting is not None:
+            raise QemuError("QEMU is still awaiting command")
 
         if self.ssh:
             self.conn.close()
@@ -317,6 +335,8 @@ class Qemu:
         else:
             self._enter_qemu_monitor()
             self.proc.sendline("quit")
+
+        delattr(self, "proc")
 
     def reset(self, tag):
         """
