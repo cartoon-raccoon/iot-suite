@@ -93,6 +93,10 @@ class Qemu:
         self.started = False
         self.is_interactive = True
 
+        # the currently running job, if run asynchronously.
+        # will be a `fabric.Promise` if running on SSH
+        self.awaiting = None
+
         # construct the command to execute
         vmdir= self.config.image
         self._cmd = shutil.which(ARCH_CMDS[self.config.arch])
@@ -188,7 +192,13 @@ class Qemu:
 
         `wait` determines whether or not the Qemu controller waits for the command
         to complete. Setting it to `False` allows the user to expect custom output from
-        the command before waiting it for completion.
+        the command or run additional operations before waiting it for completion.
+
+        Important to note is that `wait` does not allow `Qemu` to run multiple commands
+        simultaneously. Due to the synchronous nature of the data collection procedure,
+        this functionality, while supported by the backend, is not implemented in `Qemu`.
+        `wait` only exists to allow the user to run additional code locally or perform
+        additional work on a currently running command.
         """
         if not self._check_started():
             # todo: raise error
@@ -198,7 +208,30 @@ class Qemu:
         if not self.ssh:
         
             self.proc.sendline(cmd)
+            self.awaiting = cmd
+            if not wait:
+                return None
             
+        else:
+            self.awaiting = self.conn.run(cmd, hide=True, asynchronous=True)
+            if not wait:
+                return None
+        
+        return self.wait_existing()
+
+    def expect(self, pattern):
+        """
+        Expect a particular pattern of output from the command.
+        """
+        #todo
+        pass
+
+    def wait_existing(self):
+        """
+        Wait on a currently running command.
+        """
+        if not self.ssh:
+            #? confirm that this check is the proper way to do this
             if self.proc.expect(f"{self.prompt}") != 0:
                 # todo: raise error
                 return CmdResult(1, "")
@@ -206,6 +239,7 @@ class Qemu:
             output = self.proc.before
             
             self.proc.sendline("echo $?")
+            #? same for this one
             if self.proc.expect(self.prompt) != 0:
                 # todo: raise error
                 return CmdResult(1, "")
@@ -214,17 +248,22 @@ class Qemu:
                 self.proc.before.split(b'\r\r\n')[1].decode("ascii")
             )
 
-            output = output.decode("ascii").strip().lstrip(f"{cmd}\r\r\n")
+            # assume self.awaiting was set to the command, since not ssh
+            output = output.decode("ascii").strip().lstrip(f"{self.awaiting}\r\r\n")
+
+            self.awaiting = None
 
             return CmdResult(exitcode, output)
+
         else:
-            # todo: catch unexpected exit and return CmdResult properly
             try:
-                result = self.conn.run(cmd, hide=True)
+                result = self.awaiting.join()
             except UnexpectedExit as e:
                 result = e.result
             output = result.stdout if result.exited == 0 else result.stderr
-            return CmdResult(result.exited, output)
+
+            self.awaiting = None
+            return CmdResult(result.exited, output.strip())
         
     def send_qmp_cmd(self, cmd):
         if not cmd.supported() or not self.config.qmp:
@@ -252,6 +291,11 @@ class Qemu:
         Stops the VM via the QEMU monitor.
         """
         logger.debug("stopping QEMU VM")
+
+        if self.awaiting is not None:
+            # todo: raise error
+            logger.error("error: qemu is still awaiting command")
+            return
 
         if self.ssh:
             self.conn.close()
@@ -396,6 +440,8 @@ class Qemu:
         logger.debug(f"running command: '{self._cmd} {self._cmd_args}'")
 
 if __name__ == "__main__":
+    import time
+
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     logger.addHandler(handler)
@@ -433,7 +479,15 @@ if __name__ == "__main__":
     c2.noninteractive(ssh=("192.168.0.2", 2222))
 
     logger.debug("running test command")
-    result = vm.run_cmd("ls")
+    vm.run_cmd("ls", wait = False)
+
+    print("")
+    for i in range(5):
+        print(f"waiting - seconds elapsed: {i}\r", end="")
+        time.sleep(1)
+
+    result = vm.wait_existing()
+
     print(f'"{result.output}"', result.exitcode)
 
     logger.debug("running second test command")
