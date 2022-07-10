@@ -10,11 +10,14 @@ logger = logging.getLogger("dynamic")
 
 CNC_PRE_COMMANDS = [
     "cowrie/bin/cowrie start",
+    "sudo python3 FakeDNS/fakedns.py -c FakeDns/iotsuite_dns.conf & > fakedns.txt"
     #"./fakedns.py" # this needs to run in the background and redirect to a file
     # we then need to transfer the file out to this machine
 ]
 
-CNC_POST_COMMANDS = []
+CNC_POST_COMMANDS = [
+    "sudo pkill python3",
+]
 
 # the command to start the IoTFTP server, formatted with ip addr and port
 IOTFTP_START_CMD = "python iotftp/server.py {} {}"
@@ -22,20 +25,41 @@ IOTFTP_START_CMD = "python iotftp/server.py {} {}"
 # the command to start the on-VM analysis script, formatted with file
 ANALYSE_SCRIPT_CMD = "python analyse.py {}"
 
+class UnexpectedExit(Exception):
+    def __init__(self, errcode, stderr):
+        self.exitcode = errcode
+        self.stderr = stderr
+
+    def __str__(self):
+        return f"command exited with error code {self.exitcode}"
+
 class DynamicAnalyzer:
     """
     Initializes, starts up, and manages the network and the CNC & sandbox QEMU VMs.
     """
 
     # vmconfig and c2config should be QemuConfig
-    def __init__(self, netconfig, vmconfig, c2config, iotftpconfig):
+    def __init__(self, config: Config):
+        netconfig = config.network
+        vmconfig = config.sandbox(Arch.ARM)
+        c2config = config.cnc
+
+        self.config = config
+
+        iftpconf = (
+            config.SANDBOX["IpAddr"],
+            config.NETWORK["FileTrfPort"],
+            config.NETWORK["TrfEncoding"],
+        )
         self.net = Net(netconfig)
         self.vm = Qemu(vmconfig)
         self.cnc = Qemu(c2config)
         # [0] is ip addr, [1] is port, [2] is encoding
-        self.ftclient = IoTFTPClient(iotftpconfig[0], iotftpconfig[1], iotftpconfig[2])
+        self.ftclient = IoTFTPClient(iftpconf[0], iftpconf[1], iftpconf[2])
 
-    def startup(self, sudo_passwd, iptables_rules=[], vm_ssh=None, c2_ssh=None):
+    def startup(self):
+        sudo_passwd = self.config.GENERAL["SudoPasswd"]
+        iptables_rules = self.config.iptables()
         # set up the network
         logger.debug("debug: setting up network")
         self.net.setup(sudo_passwd)
@@ -44,11 +68,26 @@ class DynamicAnalyzer:
         for rule in iptables_rules:
             self.net.append_iptables(rule)
 
-        # startup the vms
-        logger.debug("debug: starting noninteractive vm session")
-        self.vm.noninteractive(vm_ssh)
-        logger.debug("debug: starting noninteractive c2 session")
-        self.cnc.noninteractive(c2_ssh)
+        if self.config.SANDBOX.ssh():
+            vm_ssh = (self.config.SANDBOX["IpAddr"], int(self.config.SANDBOX["SSHPort"]))
+        else:
+            vm_ssh = None
+
+        if self.config.CNC.ssh():
+            c2_ssh = (self.config.CNC["IpAddr"], int(self.config.CNC["SSHPort"]))
+        else:
+            c2_ssh = None
+
+        try:
+            # startup the vms
+            logger.debug("debug: starting noninteractive vm session")
+            self.vm.noninteractive(vm_ssh)
+            logger.debug("debug: starting noninteractive c2 session")
+            self.cnc.noninteractive(c2_ssh)
+        except Exception as e:
+            logger.error(f"an error occurred while starting the VMs: {e}")
+            self.net.teardown(sudo_passwd)
+            raise e
 
         # reset the sandbox to a clean state
         if not self.vm.config.qmp:
@@ -60,10 +99,18 @@ class DynamicAnalyzer:
             logger.debug(f"debug: running command '{cmd}'")
             res = self.cnc.run_cmd(cmd)
             if res.exitcode != 0:
-                #todo: raise error
-                logger.error(f"command '{cmd}' returned with exitcode {res.exitcode}, errmsg '{res.output}'")
+                logger.error(f"command '{cmd}' returned exitcode {res.exitcode}, errmsg '{res.output}'")
+                raise UnexpectedExit(res.exitcode, res.output)
 
-    def shutdown(self, sudo_passwd):
+    def shutdown(self):
+
+        sudo_passwd = self.config.GENERAL["SudoPasswd"]
+
+        logger.debug("debug: running all cnc shutdown commands")
+        for cmd in CNC_POST_COMMANDS:
+            res = self.cnc.run_cmd(cmd)
+            if res.exitcode != 0:
+                logger.error(f"command '{cmd}' returned exitcode {res.exitcode} errmsg '{res.output}'")
 
         # shutdown the sandbox and cnc VMs
         logger.debug("debug: stopping sandbox vm")
@@ -88,6 +135,7 @@ class DynamicAnalyzer:
 
     def receive_from_vm(self, path, dest, bye=True):
         #todo: move from temp folder to dest
+        #! setting bye to true assumes that the server is already running
         self.ftclient.get(path)
 
         if bye:
@@ -98,7 +146,8 @@ class DynamicAnalyzer:
         #* 1. send sample to vm via iotftp
         #* 2. run analyse.py
         #* 3. collate list of files to retrieve
-        #* 4. retrieve files
+        #* 4. retrieve files from sandbox vm
+        #* 5. retrieve dns record from cnc vm
         pass
 
 if __name__ == "__main__":
@@ -111,24 +160,11 @@ if __name__ == "__main__":
 
     conf = Config("../configs/iotsuite.conf")
 
-    sudo = conf.GENERAL["SudoPasswd"]
+    dynamic = DynamicAnalyzer(conf)
 
-    net_cf = conf.network
-    vm_qemucf = conf.sandbox(Arch.ARM)
-    c2_qemucf = conf.cnc
+    dynamic.startup()
 
-    if conf.CNC.ssh():
-        c2_ssh = (conf.CNC["IpAddr"], int(conf.CNC["SSHPort"]))
-
-    iftpconf = (
-        conf.SANDBOX["IpAddr"],
-        conf.NETWORK["FileTrfPort"],
-        conf.NETWORK["TrfEncoding"],
-    )
-
-    dynamic = DynamicAnalyzer(
-        net_cf, vm_qemucf, c2_qemucf, iftpconf
-    )
-
-    dynamic.startup(sudo, c2_ssh=c2_ssh)
-    dynamic.shutdown(sudo)
+    # vm_ipaddr = conf.SANDBOX["IpAddr"]
+    # iotftp_port = conf.NETWORK["FileTrfPort"]
+    # dynamic.vm.run_cmd(IOTFTP_START_CMD.format())
+    dynamic.shutdown()
