@@ -26,6 +26,9 @@ IOTFTP_START_CMD = "python iotftp/server.py {} {}"
 ANALYSE_SCRIPT_CMD = "python analyse.py {}"
 
 class UnexpectedExit(Exception):
+    """
+    Raised when a command exits with a non-zero exit code.
+    """
     def __init__(self, errcode, stderr):
         self.exitcode = errcode
         self.stderr = stderr
@@ -126,14 +129,19 @@ class DynamicAnalyzer:
         self.net.teardown(sudo_passwd)
 
 
-    def send_to_vm(self, path, dest, bye=True):
-        #todo: move dest to temp folder
+    def send_to_vm(self, path, dest, setup=False, bye=True):
+        ipaddr = self.config.SANDBOX["IpAddr"]
+        port = int(self.config.NETWORK["FileTrfPort"])
+
+        if setup:
+            self.vm.run_cmd(IOTFTP_START_CMD.format(ipaddr, port))
+        #todo: move path to temp folder before sending
         self.ftclient.put(path)
 
         if bye:
             self.ftclient.bye()
 
-    def receive_from_vm(self, path, dest, bye=True):
+    def receive_from_vm(self, path, dest, setup=False, bye=True):
         #todo: move from temp folder to dest
         #! setting bye to true assumes that the server is already running
         self.ftclient.get(path)
