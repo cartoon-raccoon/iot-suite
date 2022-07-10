@@ -74,7 +74,10 @@ class QemuError(Exception):
 
 class CmdResult:
     """
-    Result of a command run on the sandbox VM
+    Result of a command run on the sandbox VM.
+
+    This object should not be constructed directly, but instead
+    returned as a result of waiting on commands.
     """
     def __init__(self, exitcode, output):
         self.exitcode = exitcode
@@ -243,19 +246,23 @@ class Qemu:
             raise QemuError("no currently running command")
         
         if not self.ssh:
+            # expect command prompt to confirm command completion
             #? confirm that this check is the proper way to do this
             if self.proc.expect(f"{self.prompt}") != 0:
                 # todo: provide additional info
                 raise QemuError("error while expecting command prompt")
 
+            # save output to a local string
             output = self.proc.before
-            
+        
+            # run check for exit code
             self.proc.sendline("echo $?")
             #? same for this one
             if self.proc.expect(self.prompt) != 0:
                 # todo: raise error
                 raise QemuError("error while expecting command prompt")
 
+            # parse exit code from output
             exitcode = int(
                 self.proc.before.split(b'\r\r\n')[1].decode("ascii")
             )
@@ -263,12 +270,14 @@ class Qemu:
             # assume self.awaiting was set to the command, since not ssh
             output = output.decode("ascii").strip().lstrip(f"{self.awaiting}\r\r\n")
 
+            # unset awaiting
             self.awaiting = None
 
             return CmdResult(exitcode, output)
 
         else:
             try:
+                # try to join on promise
                 result = self.awaiting.join()
             except UnexpectedExit as e:
                 result = e.result
@@ -278,6 +287,15 @@ class Qemu:
             return CmdResult(result.exited, output.strip())
         
     def send_qmp_cmd(self, cmd):
+        """
+        Send a QMP command through a network socket. This cannot be run
+        if the QEMU controller is configured to send monitor commands
+        through the QEMU monitor.
+
+        Raises `QemuError` if the controller is not configured for QMP or
+        the command being sent is not supported by IoTSuite.
+        """
+
         if not cmd.supported():
             raise QemuError(f"QMP command {cmd.execute} is not supported")
 
@@ -288,9 +306,15 @@ class Qemu:
         return self._send_qmp(cmd.to_json())
 
     def send_qemu_command(self, cmd, args):
+        """
+        Send a QEMU monitor command through the standard streams. This cannot
+        be run if the QEMU controller is configured to send QMP commands.
+
+        Raises `QemuError` if the controller is configured for QMP.
+        """
+
         if self.config.qmp:
-            # todo: raise error
-            return
+            raise QemuError("QEMU controller is configured for QMP")
 
         logger.debug(f"sending QEMU monitor command {cmd} with args {args}")
         
@@ -302,7 +326,7 @@ class Qemu:
 
     def stop(self):
         """
-        Stops the VM via the QEMU monitor.
+        Stops the VM via the QEMU monitor or QMP.
         """
         logger.debug("stopping QEMU VM")
 
@@ -341,8 +365,15 @@ class Qemu:
     def reset(self, tag):
         """
         Reset the VM to a clean instance.
+
+        Raises `QemuError` if architecture is MIPS or MIPSEL, due to a bug
+        in the implementation of `qemu-system-mips{,el}` requiring the reset
+        to be performed offline using `qemu-img`, invoked via `offline_reset()`.
         """
+
+        #todo: add check for architecture
         if self.config.qmp:
+            logger.error("error: cannot perform system reset via QMP")
             self.send_qmp_cmd(QMPCommand("loadvm", tag=tag))
         else:
             self.send_qemu_command("loadvm", [tag])
@@ -362,8 +393,9 @@ class Qemu:
         on a live instance.
         """
         if self.started:
-            # todo: raise error
-            return
+            raise QemuError("cannot perform offline reset while QEMU is running")
+        
+        #todo
         pass
 
     #! ================== PRIVATE METHODS ===================
