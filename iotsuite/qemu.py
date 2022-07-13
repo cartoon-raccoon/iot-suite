@@ -222,6 +222,7 @@ class Qemu:
             self.proc.sendline(cmd)
             self.awaiting = cmd
             if not wait:
+                logger.debug(f"command before: '{self.proc.before}")
                 return None
             
         else:
@@ -254,12 +255,12 @@ class Qemu:
 
             # save output to a local string
             output = self.proc.before
+            logger.debug(f"output: {output}")
         
             # run check for exit code
             self.proc.sendline("echo $?")
             #? same for this one
             if self.proc.expect(self.prompt) != 0:
-                # todo: raise error
                 raise QemuError("error while expecting command prompt")
 
             # parse exit code from output
@@ -285,6 +286,15 @@ class Qemu:
 
             self.awaiting = None
             return CmdResult(result.exited, output.strip())
+
+    def terminate_existing(self):
+        if self.awaiting is None:
+            raise QemuError("no currently running command")
+        if not self.ssh:
+            self.proc.sendcontrol('c')
+            return self.wait_existing()
+        else:
+            raise QemuError("cannot terminate command on SSH")
         
     def send_qmp_cmd(self, cmd):
         """
@@ -324,20 +334,19 @@ class Qemu:
         self.proc.expect(QEMU_MONITOR_PROMPT)
         self._exit_qemu_monitor()
 
-    def stop(self):
+    def stop(self, force=False):
         """
         Stops the VM via the QEMU monitor or QMP.
         """
         logger.debug("stopping QEMU VM")
-
 
         if not self._check_started():
             # if not started, don't do anything
             logger.debug("QEMU process not started, returning")
             return
 
-        if self.awaiting is not None:
-            raise QemuError("QEMU is still awaiting command")
+        if self.awaiting is not None and not force:
+            raise QemuError("attempted to stop QEMU controller while still awaiting")
 
         if self.ssh:
             self.conn.close()
@@ -346,9 +355,7 @@ class Qemu:
             e = self.send_qmp_cmd(QMPCommand("quit"))
 
             if not check_res_err(e):
-                # todo: raise error
-                logger.error(f"error: did not quit, received QEMU response {e}")
-                return
+                raise QemuError(f"did not quit, received QEMU response {e}")
             
             self.qmp.shutdown(socket.SHUT_RDWR)
             self.qmp.close()
@@ -370,6 +377,8 @@ class Qemu:
         in the implementation of `qemu-system-mips{,el}` requiring the reset
         to be performed offline using `qemu-img`, invoked via `offline_reset()`.
         """
+
+        logger.debug(f"resetting qemu to state {tag}")
 
         #todo: add check for architecture
         if self.config.qmp:
@@ -406,6 +415,7 @@ class Qemu:
     def _expect_login_prompt(self, prompt):
         try:
             self.proc.expect(f"{prompt}")
+            logger.debug(f"output before: {self.proc.before}")
         except:
             # todo: raise error
             logger.error(f"error: could not login: got '{self.proc.before}'")
@@ -459,18 +469,15 @@ class Qemu:
         self.proc.send('c')
 
         if self.proc.expect(QEMU_MONITOR_PROMPT) != 0:
-            # todo: raise error
-            logger.error("error: did not receive qemu prompt")
-            return
+            raise QemuError("did not receive qemu prompt")
 
     def _exit_qemu_monitor(self):
         self.proc.sendcontrol('a')
+        # sendline to send a newline and elicit the prompt to reappear
         self.proc.sendline('c')
 
         if self.proc.expect(self.prompt) != 0:
-            # todo: raise error
-            logger.error("error: did not receive qemu prompt")
-            return
+            raise QemuError("did not receive qemu prompt")
     
     def _startup(self):
         # set up the additional arguments needed to run the sandbox
@@ -536,6 +543,11 @@ if __name__ == "__main__":
     print("")
     for i in range(5):
         print(f"waiting - seconds elapsed: {i}\r", end="")
+        if i == 3:
+            try:
+                vm.stop()
+            except QemuError as e:
+                logger.error(f"{e}")
         time.sleep(1)
 
     result = vm.wait_existing()
@@ -546,7 +558,7 @@ if __name__ == "__main__":
     result2 = c2.run_cmd("ls")
     print(f'"{result2.output}"', result2.exitcode)
 
-    vm.send_qemu_command("savevm", ["loaded"])
+    #vm.send_qemu_command("savevm", ["loaded"])
 
     vm.stop()
     c2.stop()
