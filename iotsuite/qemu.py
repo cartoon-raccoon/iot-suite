@@ -484,7 +484,7 @@ class Qemu:
         self._construct_cmd()
 
         # start the sandbox
-        self.proc = pexpect.spawn(self._cmd, self._cmd_args, timeout=60)
+        self.proc = pexpect.spawn(self._cmd, self._cmd_args, timeout=self.config.timeout)
         self.started = True
 
         # sleep for a second to give the VM time to start up the QMP server

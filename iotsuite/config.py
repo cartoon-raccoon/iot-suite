@@ -29,7 +29,7 @@ class QemuConfig:
     Class representing the configuration of a QEMU instance.
     """
     def __init__(self, arch: Arch, 
-        user, passwd, image, helper, mac,
+        user, passwd, image, helper, mac, timeout,
         login_prompt, qmp_port=None, qmp=False
     ):
         """
@@ -51,6 +51,7 @@ class QemuConfig:
         self.image = image
         self.nic_helper = helper
         self.macaddr = mac
+        self.timeout = timeout
         self.qmp_port = qmp_port
         self.login_prompt = login_prompt
         self.qmp = qmp
@@ -160,6 +161,11 @@ class Section:
     def check_enabled(self, maybe):
         """
         Convenience method to check whether a Section has a particular key enabled.
+
+        `maybe` should be a string.
+
+        Values that evaluate to `True` are `yes` and `true`, non case-sensitive.
+        All other values evaluate to `False`.
         """
         maybe = self[maybe]
 
@@ -288,6 +294,7 @@ class Config:
                 cnc["Image"],
                 net["NicHelper"],
                 cnc["MacAddr"],
+                int(cnc["ExpTimeout"]),
                 cnc["LoginPrompt"],
                 qmp_port=int(cnc["QMPPort"]),qmp=cnc.qmp()
             )
@@ -318,6 +325,7 @@ class Config:
                 arch_config["Image"],
                 net["NicHelper"],
                 arch_config["MacAddr"],
+                int(arch_config["ExpTimeout"]),
                 arch_config["LoginPrompt"],
                 qmp_port=qmp_port, qmp=arch_config.qmp()
             )
