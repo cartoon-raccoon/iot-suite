@@ -57,3 +57,28 @@ infrastructure:
     runs sshd on port 2222 for communication with the sandbox orchestrator
     runs inetsim for simulating network services
     runs cowrie honeypot on 22 and 23 for telnet/ssh attack tracking
+
+ISSUES:
+  not particularly robust, unable to handle many unusual cases
+
+  no type safety when performing type casts, i.e. converting strings to ints
+
+BUGS:
+  if QEMU is asked to load a snapshot that does not exist on a QCOW2 file,
+  it will freeze
+
+  The QEMU controller is unable to properly handle a situation where the IoTFTP
+  server on the sandbox vm terminates unexpectedly
+
+  QEMU segfaults when loading a live snapshot on MIPS and MIPSEL architectures
+
+  shell prompt on the sandbox machine is '# ', so comments in python files and shell
+  scripts can be interpreted by pexpect as the new prompt, thereby terminating a
+  running command prematurely
+
+TODO:
+  implement rest of iotftp commands; add mkdir functionality to create new paths
+
+  
+
+  
