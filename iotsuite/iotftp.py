@@ -5,6 +5,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 import os
 import logging
 import time
+import utils
 
 logger = logging.getLogger("iotftp")
 
@@ -142,7 +143,7 @@ class IoTFTPClient:
             params = params.split(DELIMITER.decode(self.encoding))
             port, size = int(params[1]), int(params[2])
 
-            print(f"[*] Reading {size} bytes from port {port}")
+            logger.debug(f"[*] Reading {size} bytes from port {port}")
 
             s.send(ACKNOW)
 
@@ -271,13 +272,13 @@ class IoTFTPClient:
         self.eval_result(res, "[*] Command successful")
 
     def pwd(self):
-        pass
+        utils.todo()
 
     def lsd(self):
-        pass
+        utils.todo()
 
     def cwd(self, dirname):
-        pass
+        utils.todo()
 
     def bye(self):
         with socket(AF_INET, SOCK_STREAM) as s:
