@@ -92,6 +92,9 @@ def main():
         if file not in clean_ls:
             export_files.append(file)
 
+    logger.debug("clearing iptables")
+    subprocess.run(["iptables", "-F"])
+
     # output file names to be retrieved by iotftp
     print("\n===== LIST OF FILES TO RETRIEVE =====")
     for file in export_files:
