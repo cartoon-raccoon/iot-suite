@@ -7,7 +7,7 @@ import time
 import sys
 
 from fabric import Connection
-from invoke.exceptions import UnexpectedExit
+from invoke.exceptions import UnexpectedExit, CommandTimedOut
 
 from config import Config, QemuConfig
 from arch import Arch, ARCH_CMDS
@@ -222,7 +222,6 @@ class Qemu:
             self.proc.sendline(cmd)
             self.awaiting = cmd
             if not wait:
-                logger.debug(f"command before: '{self.proc.before}")
                 return None
             
         else:
@@ -255,7 +254,7 @@ class Qemu:
 
             # save output to a local string
             output = self.proc.before
-            logger.debug(f"output: {output}")
+            logger.debug(f"output: {output.decode('ascii')}")
         
             # run check for exit code
             self.proc.sendline("echo $?")
@@ -280,6 +279,8 @@ class Qemu:
             try:
                 # try to join on promise
                 result = self.awaiting.join()
+            except CommandTimedOut as e:
+                result = e.result
             except UnexpectedExit as e:
                 result = e.result
             output = result.stdout if result.exited == 0 else result.stderr
@@ -287,14 +288,27 @@ class Qemu:
             self.awaiting = None
             return CmdResult(result.exited, output.strip())
 
-    def terminate_existing(self):
+    def terminate_existing(self, prog=None):
+        """
+        Terminate an existing running command.
+
+        Due to the API of the backing SSH library, `prog` is required if the backing
+        connection is SSH-based, as it runs `pkill` to kill the command.
+        A `QemuError` is raised if `prog` is not provided.
+        """
         if self.awaiting is None:
             raise QemuError("no currently running command")
         if not self.ssh:
             self.proc.sendcontrol('c')
-            return self.wait_existing()
         else:
-            raise QemuError("cannot terminate command on SSH")
+            if prog is None:
+                raise QemuError("cannot terminate command on SSH without given prog")
+            else: #! this is janky as fuck - please please PLEASE find a better solution
+                try:
+                    self.conn.run(f"sudo pkill -SIGINT {prog}")
+                except UnexpectedExit:
+                    raise QemuError(f"failed to properly terminate program '{prog}'")
+        return self.wait_existing()
         
     def send_qmp_cmd(self, cmd):
         """
@@ -391,7 +405,10 @@ class Qemu:
         """
         Create a clean snapshot of a VM.
         """
-        self.send_qmp_cmd(QMPCommand("savevm", tag=tag))
+        if self.config.qmp:
+            self.send_qmp_cmd(QMPCommand("savevm", tag=tag))
+        else:
+            self.send_qemu_command("savevm", [tag])
 
     def offline_reset(self):
         """
@@ -484,7 +501,11 @@ class Qemu:
         self._construct_cmd()
 
         # start the sandbox
-        self.proc = pexpect.spawn(self._cmd, self._cmd_args, timeout=self.config.timeout)
+        self.proc = pexpect.spawn(
+            self._cmd, self._cmd_args,
+            maxread=1,
+            timeout=self.config.timeout
+        )
         self.started = True
 
         # sleep for a second to give the VM time to start up the QMP server
