@@ -1,7 +1,6 @@
 import logging
 import re
 from collections import namedtuple
-from unittest import result
 
 from qemu import Qemu, QemuError
 from net import Net
@@ -77,6 +76,10 @@ class DynamicAnalyzer:
         self.ftclient = IoTFTPClient(iftpconf[0], int(iftpconf[1]), iftpconf[2])
 
     def startup(self):
+        """
+        Starts the network infrastructure, as well as the sandbox and CNC VMs.
+        """
+        
         sudo_passwd = self.config.GENERAL["SudoPasswd"]
         iptables_rules = self.config.iptables()
         # set up the network
@@ -127,6 +130,9 @@ class DynamicAnalyzer:
                 raise UnexpectedExit(res)
 
     def shutdown(self):
+        """
+        Shuts down the network infrastructure and VMs.
+        """
 
         sudo_passwd = self.config.GENERAL["SudoPasswd"]
 
@@ -170,6 +176,9 @@ class DynamicAnalyzer:
     def send_to_vm(self, path, dest, setup=False, bye=True):
         """
         Send a file to the VM via IoTFTP.
+
+        Setting `setup` to `True` will run `vm_iotftp_server` before sending the file.
+        `bye` controls whether a `BYE` command will be sent after sending the file.
         """
 
         if setup:
@@ -192,6 +201,9 @@ class DynamicAnalyzer:
     def receive_from_vm(self, path, dest, setup=False, bye=True):
         """
         Receive a file from the VM via IoTFTP.
+
+        Setting `setup` to `True` will run `vm_iotftp_server` before sending the file.
+        `bye` controls whether a `BYE` command will be sent after sending the file.
         """
 
         if setup:
@@ -213,6 +225,14 @@ class DynamicAnalyzer:
                 raise UnexpectedExit(res)
     
     def run(self, sample):
+        """
+        Transfers the sample to the sandbox VM, starts the fake DNS server on the
+        CNC VM, and runs the analysis script on the sandbox VM.
+
+        The analysis script will output the files produced, and the files will then
+        be retrieved from the sandbox VM via IoTFTP, and sorted into created files,
+        packet capture files, and syscall traces.
+        """
         # set up iotftp server and send sample over
         try:
             self.vm_iotftp_server()
