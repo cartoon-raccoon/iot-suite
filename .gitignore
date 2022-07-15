@@ -1,4 +1,5 @@
 vms/
 br-external/rootfs/opt/
 iotsuite/__pycache__/
+iotsuite/analysis/__pycache__/
 test/
