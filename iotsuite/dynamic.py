@@ -146,11 +146,14 @@ class DynamicAnalyzer:
         logger.debug("debug: resetting sandbox vm")
         self.vm.reset("clean")
 
-        # shutdown the sandbox and cnc VMs
-        logger.debug("debug: stopping sandbox vm")
-        self.vm.stop()
-        logger.debug("debug: stopping c2 vm")
-        self.cnc.stop()
+        try:# shutdown the sandbox and cnc VMs
+            logger.debug("debug: stopping sandbox vm")
+            self.vm.stop(force=True)
+            logger.debug("debug: stopping c2 vm")
+            self.cnc.stop(force=True)
+        except QemuError:
+            self.vm.terminate_existing()
+            self.cnc.terminate_existing()
 
         # flush iptables
         logger.debug("debug: flushing iptables")
@@ -343,10 +346,4 @@ if __name__ == "__main__":
         dynamic.net.teardown(conf.GENERAL["SudoPasswd"])
         sys.exit(1)
 
-    try:
-        dynamic.shutdown()
-    except QemuError:
-        dynamic.vm.terminate_existing()
-        dynamic.shutdown()
-    except:
-        dynamic.shutdown()
+    dynamic.shutdown()
