@@ -8,6 +8,7 @@ logger = logging.getLogger("config")
 # Config sections
 GENERAL = "GENERAL"
 STATIC = "STATIC"
+DYNAMIC = "DYNAMIC"
 HEURISTICS = "HEURISTICS"
 CNC = "CNC"
 SANDBOX = "SANDBOX"
@@ -22,7 +23,7 @@ NETWORK = "NETWORK"
 IPTABLES = "IPTABLES"
 
 _ARCHS = [ARM, MIPS, MIPSEL, M68K, PPC, I386, AMD64]
-_REQUIRED = [GENERAL, STATIC, HEURISTICS, CNC, SANDBOX, NETWORK]
+_REQUIRED = [GENERAL, STATIC, DYNAMIC, HEURISTICS, CNC, SANDBOX, NETWORK]
 
 class QemuConfig:
     """
@@ -383,12 +384,8 @@ class Config:
         if result is not None:
             raise InvalidConfig(f"invalid configuration: missing required section '{result}'")
 
-        setattr(self, GENERAL, Section(self.cp[GENERAL], GENERAL))
-        setattr(self, STATIC, Section(self.cp[STATIC], STATIC))
-        setattr(self, HEURISTICS, Section(self.cp[HEURISTICS], HEURISTICS))
-        setattr(self, CNC, Section(self.cp[CNC], CNC))
-        setattr(self, SANDBOX, Section(self.cp[SANDBOX], SANDBOX))
-        setattr(self, NETWORK, Section(self.cp[NETWORK], NETWORK))
+        for sec in _REQUIRED:
+            setattr(self, sec, Section(self.cp[sec], sec))
 
         for arch in _ARCHS:
             try:
