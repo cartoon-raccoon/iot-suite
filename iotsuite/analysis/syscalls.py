@@ -2,7 +2,7 @@ import logging
 import re
 from collections import namedtuple
 
-logger = logging.getLogger("syscalls")
+logger = logging.getLogger("analysis-syscalls")
 
 Syscall = namedtuple("Syscall", ["syscall", "params", "result", "elaboration"])
 
