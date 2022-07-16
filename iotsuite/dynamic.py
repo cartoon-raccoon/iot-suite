@@ -57,9 +57,9 @@ class DynamicAnalyzer:
     """
 
     # vmconfig and c2config should be QemuConfig
-    def __init__(self, config: Config):
+    def __init__(self, arch: Arch, config: Config):
         netconfig = config.network
-        vmconfig = config.sandbox(Arch.ARM)
+        vmconfig = config.sandbox(arch)
         c2config = config.cnc
 
         self.config = config
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     # startup the dynamic analyzer
     try:
         dynamic.startup()
-        res = dynamic.run("testgay")
+        res = dynamic.run("testelf")
         logger.debug(f"{res}")
     except Exception as e:
         logger.error(f"{traceback.print_tb(sys.exc_info()[2])}\n{e}")
