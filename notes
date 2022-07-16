@@ -19,21 +19,10 @@ dynamic analysis:
   - direct qemu monitor access if invoked
   - enabling addition of user-defined / predefined cmd-line arguments
 
-memory analysis:
-  - system memory dump (volatility)
-  - core dump/analysis
-
-result presentation:
-  - domains/ips and ports accessed
-  - suricata rule matching
-  - filesystem changes/syscall corroboration
-  - yara rule matching
-  - support for virustotal API
-
 dynamic analysis infrastructure:
   - orchestration within vm coordinated by python script (subprocess)
   - shell scripts set up and reset fakeroot environment
-  - files transferred to and from vm via ftp (pure-ftpd) on non-standard port
+  - files transferred to and from vm via custom ftp on non-standard port
     (ssh/scp can be killed by malware)
   - communication with vm done by pipe/stdio
 
@@ -50,18 +39,13 @@ subcommands:
   full    --transfer/-x [FTP|SCP]
   qemu    --comms/-c [STDIO|SSH]
 
-infrastructure:
-  all VMs connected on a network bridge 'br0'
-  user-defined number of test VMs and a fake C2 server
-  fake c2
-    runs sshd on port 2222 for communication with the sandbox orchestrator
-    runs inetsim for simulating network services
-    runs cowrie honeypot on 22 and 23 for telnet/ssh attack tracking
-
 ISSUES:
-  not particularly robust, unable to handle many unusual cases
+  not particularly robust, unable to properly handle many unusual cases
 
   no type safety when performing type casts, i.e. converting strings to ints
+
+  the ARM machine only accepts samples with a specific EABI, other ARM samples
+  will throw strace off and result in bad data
 
 BUGS:
   if QEMU is asked to load a snapshot that does not exist on a QCOW2 file,
@@ -70,15 +54,54 @@ BUGS:
   The QEMU controller is unable to properly handle a situation where the IoTFTP
   server on the sandbox vm terminates unexpectedly
 
-  QEMU segfaults when loading a live snapshot on MIPS and MIPSEL architectures
+  QEMU segfaults when loading a live snapshot on MIPS and MIPSEL architectures,
+  necessitating these VMs to be reset offline via qemu-img
 
   shell prompt on the sandbox machine is '# ', so comments in python files and shell
   scripts can be interpreted by pexpect as the new prompt, thereby terminating a
   running command prematurely
 
-TODO:
+TODO: # arranged in order of priority
+  add reset functionality for MIPS and MIPSEL vms via qemu-img
+
+  add CTPH functionality and UPX packing detection
+
+  add inotify functionality to analyse script
+
+  add memory image dumping via GDB/ptrace
+
   implement rest of iotftp commands; add mkdir functionality to create new paths
 
-  
+  add fakenet-style redirection of ip addresses using iptables-nfqueue
 
+  add collation of IP addresses from PCAP file
+
+  add ability to onboard analysis script to configure analysis time and disable
+  certain analysis functionality
+
+  add ability to seamlessly run on a single/batch (sorting by arch, etc)
   
+  add ability to detect whether the file is a sample or dir and run single/batch
+  accordingly
+
+  add iptables rules parsing from json and using invoke to insert them
+  also check for if a rule clashes with rules needed for ip redirection
+
+  add checks for whether the required virtual machines and their images are present
+
+  implement automatic dhcpd and qemu bridge config file generation
+
+  allow overriding of config settings via command-line arguments
+
+BEFORE I LEAVE:
+  implement orchestration and fully automate process
+
+  better logging and UX
+
+  add API for user-defined plugins
+
+  add reset functionality for MIPS and MIPSEL vms via qemu-img
+
+  add CTPH functionality and UPX packing detection
+
+  add inotify functionality to analyse script
