@@ -2,13 +2,20 @@ from enum import Enum
 
 #* Names as defined in PyELFTools.
 #! Changing these strings will break IoTSuite!
+ARM = "ARM"
+MIPS = "MIPS"
+M68K = "Motorola 68000"
+PPC = "PowerPC"
+I386 = "x86"
+AMD64 = "x64"
+
 SUPPORTED_ARCHS = [
-    "ARM",
-    "MIPS", # MIPSEL is MIPS with little endian variant
-    "Motorola 68000",
-    "PowerPC",
-    "x86",
-    "x64",
+    ARM,
+    MIPS, # MIPSEL is MIPS with little endian variant
+    M68K,
+    PPC,
+    I386,
+    AMD64,
 ]
 
 def supports(arch):
