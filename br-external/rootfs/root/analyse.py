@@ -37,8 +37,8 @@ def main():
     # run dumpcap
     dumpcap_args = [
         "/usr/bin/dumpcap",
-        "-a", f"duration:{SECONDS_TO_RUN}",
-        "-w", f"{usef}.pcapng",
+        "-a", f"duration:{SECONDS_TO_RUN}", "-P",
+        "-w", f"{usef}.pcap",
     ]
     logger.debug(f"debug: spawning dumpcap with args {dumpcap_args}")
     dumpcap = subprocess.Popen(dumpcap_args, stdout=PIPE, stderr=PIPE)
