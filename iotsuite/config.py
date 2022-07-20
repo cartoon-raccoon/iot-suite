@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 import logging
+from functools import cached_property
 
 from arch import Arch
 
@@ -261,7 +262,7 @@ class Config:
         except KeyError:
             return None
 
-    @property
+    @cached_property
     def network(self):
         """
         Returns a complete `NetConfig` parsed from the config file.
@@ -279,7 +280,7 @@ class Config:
         except AttributeError:
             return None
     
-    @property
+    @cached_property
     def cnc(self):
         """
         Returns a complete configuration for the CNC VM.
@@ -339,13 +340,17 @@ class Config:
         #todo: parse iptables and return a list of IptablesRule
         return []
     
-    def arch(self, arch: str):
+    def arch(self, arch):
         """
         Returns the configuration settings for the architecture specified.
-        The parameter has to be a string or the function will return None.
+        The parameter has to be a string or Arch; else the function will
+        return None.
 
         Returns None if the configuration section does not exist.
         """
+        if isinstance(arch, Arch):
+            arch = arch.value
+        
         try:
             return Section(self.cp[arch], arch, self.SANDBOX)
         except KeyError:
