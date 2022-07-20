@@ -3,6 +3,7 @@ import logging
 from functools import cached_property
 
 from arch import Arch
+from utils import IoTSuiteError
 
 logger = logging.getLogger("config")
 
@@ -74,7 +75,7 @@ class NetConfig:
         self.dhcp = dhcpconf
         self.ipaddr = ipaddr
 
-class InvalidConfig(Exception):
+class InvalidConfig(IoTSuiteError):
     """
     Exception raised when a Config is invalid.
     """

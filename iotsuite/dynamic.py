@@ -5,6 +5,7 @@ from collections import namedtuple
 from qemu import Qemu, QemuError
 from net import Net
 from iotftp import IoTFTPClient, ServerError
+from utils import IoTSuiteError
 
 from config import Config
 
@@ -35,7 +36,7 @@ SET_PERMS_CMD = "chmod u+x {}"
 FILE_LIST_START = "===== LIST OF FILES TO RETRIEVE ====="
 FILE_LIST_END = "===== END LIST ====="
 
-class UnexpectedExit(Exception):
+class UnexpectedExit(IoTSuiteError):
     """
     Raised when a command exits with a non-zero exit code.
     """

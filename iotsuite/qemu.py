@@ -11,6 +11,7 @@ from invoke.exceptions import UnexpectedExit, CommandTimedOut
 
 from config import Config, QemuConfig
 from arch import Arch, ARCH_CMDS
+from utils import IoTSuiteError
 
 USER_PROMPT = "$ "
 ROOT_PROMPT = "# "
@@ -56,7 +57,7 @@ class QMPCommand:
 def check_res_err(res):
     return "return" in res and not res["return"]
 
-class QemuError(Exception):
+class QemuError(IoTSuiteError):
     """
     An exception raised when there is an error condition in the execution
     of the Qemu controller.

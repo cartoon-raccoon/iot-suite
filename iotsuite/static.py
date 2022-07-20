@@ -10,6 +10,7 @@ import hashlib
 from arch import *
 from config import Config
 import utils
+from utils import IoTSuiteError
 
 logger = logging.getLogger("static")
 
@@ -19,7 +20,7 @@ StaticResult = namedtuple("StaticResult", [
     "hash", "ctph", "strings", "arch", "file"
 ])
 
-class StaticError(Exception):
+class StaticError(IoTSuiteError):
     
     def __init__(self, msg):
         self.msg = msg

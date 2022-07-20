@@ -6,23 +6,27 @@ from config import Config
 from dynamic import DynamicAnalyzer
 from static import StaticAnalyzer
 import utils
+from utils import IoTSuiteError
+from analysis import syscalls, net
 
 logger = logging.getLogger("orchestrator")
 
-class IoTSuiteError(Exception):
-    
-    def __init__(self, msg):
-        self.msg = msg
+class AnalysisResult:
+    """
+    A JSON-serializable class that holds the full results of the analysis.
+    """
+    def __init__(self, **plugin_results):
+        for mod, res in plugin_results:
+            setattr(self, mod, res)
 
-    def __str__(self):
-        return self.msg
-
-    def __repr__(self):
-        return f"IoTSuiteError('{self.msg}')"
+    def __getitem__(self, item):
+        return self.__dict__[item]
 
 class Orchestrator:
     def __init__(self, config: Config, **params):
         self.config = config
+        self.net_analyzer = net.NetAnalyzer()
+        self.syscalls = syscalls.SyscallAnalyzer()
 
         if params["batch"]:
             utils.todo()
@@ -56,7 +60,7 @@ class Orchestrator:
 
     def run_dynamic(self, arch, sample):
         self.dynamic = DynamicAnalyzer(arch, self.config)
-        try:
+        try: # todo: better error handling my god
             self.dynamic.startup()
             res = self.dynamic.run(sample)
             logger.debug(f"{res}")
@@ -71,6 +75,9 @@ class Orchestrator:
         return res
 
     def run_analysis(self):
+        pass
+
+    def run_plugins(self):
         pass
 
 
