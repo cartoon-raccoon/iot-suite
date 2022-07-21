@@ -2,8 +2,8 @@ from configparser import ConfigParser
 import logging
 from functools import cached_property
 
-from arch import Arch
-from utils import IoTSuiteError
+from .arch import Arch
+from .utils import IoTSuiteError
 
 logger = logging.getLogger("config")
 

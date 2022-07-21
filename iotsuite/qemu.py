@@ -9,9 +9,9 @@ import sys
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit, CommandTimedOut
 
-from config import Config, QemuConfig
-from arch import Arch, ARCH_CMDS
-from utils import IoTSuiteError
+from .config import Config, QemuConfig
+from .arch import Arch, ARCH_CMDS
+from .utils import IoTSuiteError
 
 USER_PROMPT = "$ "
 ROOT_PROMPT = "# "

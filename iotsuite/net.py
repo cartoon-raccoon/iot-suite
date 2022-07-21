@@ -2,7 +2,7 @@ from enum import Enum
 import invoke
 import logging
 
-from config import NetConfig
+from .config import NetConfig
 
 logger = logging.getLogger("net")
 

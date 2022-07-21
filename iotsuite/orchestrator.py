@@ -2,12 +2,12 @@ import logging
 import traceback
 import sys
 
-from config import Config
-from dynamic import DynamicAnalyzer
-from static import StaticAnalyzer
-import utils
-from utils import IoTSuiteError
-from analysis import syscalls, net
+from .config import Config
+from .dynamic import DynamicAnalyzer
+from .static import StaticAnalyzer
+import iotsuite.utils as utils
+from .utils import IoTSuiteError
+from .analysis import syscalls, net
 
 logger = logging.getLogger("orchestrator")
 

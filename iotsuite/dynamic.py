@@ -2,12 +2,12 @@ import logging
 import re
 from collections import namedtuple
 
-from qemu import Qemu, QemuError
-from net import Net
-from iotftp import IoTFTPClient, ServerError
-from utils import IoTSuiteError
-
-from config import Config
+from .qemu import Qemu, QemuError
+from .net import Net
+from .iotftp import IoTFTPClient, ServerError
+from .utils import IoTSuiteError
+from .arch import Arch
+from .config import Config
 
 logger = logging.getLogger("dynamic")
 

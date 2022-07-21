@@ -5,7 +5,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 import os
 import logging
 import time
-import utils
+import iotsuite.utils as utils
 
 logger = logging.getLogger("iotftp")
 

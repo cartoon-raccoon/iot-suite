@@ -7,10 +7,10 @@ from elftools.elf.elffile import ELFFile
 import magic
 import hashlib
 
-from arch import *
-from config import Config
-import utils
-from utils import IoTSuiteError
+from .arch import *
+from .config import Config
+import iotsuite.utils as utils
+from .utils import IoTSuiteError
 
 logger = logging.getLogger("static")
 
