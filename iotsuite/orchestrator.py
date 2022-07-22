@@ -28,11 +28,12 @@ class Orchestrator:
         self.net_analyzer = net.NetAnalyzer()
         self.syscalls = syscalls.SyscallAnalyzer()
 
-        if params["batch"]:
-            utils.todo()
-        
+        if "batch" in params and params["batch"]:
+            self.batch = True
         else:
-            self.static = StaticAnalyzer(self.config)
+            self.batch = False
+        
+        self.static = StaticAnalyzer(self.config)
 
     def __enter__(self):
         # startup and initialize the static and dynamic analysers
@@ -42,14 +43,23 @@ class Orchestrator:
         # shutdown the static and dynamic analysers
         pass
 
-    def batch_run(self, samples):
+    def run(self, sample, command):
+        if self.batch:
+            self.run_batch(sample, command)
+        else:
+            self.run_single(sample, command)
+
+    def run_batch(self, samples, command):
         # run on a batch
+        print("batch!")
         utils.todo()
 
-    def run_single(self, sample):
-        self.staticres = self.run_static(sample)
-        arch = self.staticres.arch
-        self.dynres = self.run_dynamic(arch, sample)
+    def run_single(self, sample, command):
+        if command != "dynamic":
+            self.staticres = self.run_static(sample)
+        
+        if command != "static":
+            self.dynres = self.run_dynamic(sample)
 
         # todo: run analysis
 
@@ -58,7 +68,10 @@ class Orchestrator:
         self.static.set_sample(sample)
         return self.static.run()
 
-    def run_dynamic(self, arch, sample):
+    def run_dynamic(self, sample):
+        self.static.set_sample(sample)
+        arch = self.static.get_arch_enum()
+
         self.dynamic = DynamicAnalyzer(arch, self.config)
         try: # todo: better error handling my god
             self.dynamic.startup()
