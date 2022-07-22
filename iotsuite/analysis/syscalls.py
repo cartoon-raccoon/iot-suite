@@ -1,8 +1,9 @@
-import logging
 import re
 from collections import namedtuple
 
-logger = logging.getLogger("analysis-syscalls")
+from ..utils import logger as mainlog
+
+logger = mainlog.getChild("analysis-syscalls")
 
 Syscall = namedtuple("Syscall", ["syscall", "params", "result", "elaboration"])
 

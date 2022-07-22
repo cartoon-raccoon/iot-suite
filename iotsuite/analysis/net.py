@@ -1,9 +1,10 @@
 import dpkt
 import dpkt.ethernet as eth
 import re
-import logging
 
-logger = logging.getLogger("analysis-net")
+from ..utils import logger as mainlog
+
+logger = mainlog.getChild("analysis-net")
 
 class NetResult:
     def __init__(self, packets, dns):

@@ -1,4 +1,3 @@
-import logging
 import re
 from collections import namedtuple
 
@@ -6,10 +5,11 @@ from .qemu import Qemu, QemuError
 from .net import Net
 from .iotftp import IoTFTPClient, ServerError
 from .utils import IoTSuiteError
+import iotsuite.utils as utils
 from .arch import Arch
 from .config import Config
 
-logger = logging.getLogger("dynamic")
+logger = utils.logger.getChild("dynamic")
 
 # namedtuple for things
 Cmd = namedtuple("Cmd", ["cmd", "wait"])
@@ -321,6 +321,7 @@ if __name__ == "__main__":
     import sys
     import os
     import traceback
+    import logging
 
     qemulog = logging.getLogger("qemu")
     dynlog = logging.getLogger("dynamic")

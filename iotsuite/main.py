@@ -28,11 +28,11 @@ class IoTSuite:
         self.target = os.path.abspath(args.file.rstrip("/"))
 
         if args.verbose:
-            logger.setLevel(logging.DEBUG)
+            utils.logger.setLevel(logging.DEBUG)
         elif args.quiet:
-            logger.setLevel(logging.WARNING)
+            utils.logger.setLevel(logging.WARNING)
         else:
-            logger.setLevel(logging.INFO)
+            utils.logger.setLevel(logging.INFO)
 
         if args.config is not None:
             config = args.config
@@ -151,7 +151,7 @@ def main():
 
     handler = logging.StreamHandler()
     handler.setFormatter(IoTSuiteFormatter())
-    logger.addHandler(handler)
+    utils.logger.addHandler(handler)
 
     try:
         iotsuite = IoTSuite(args)

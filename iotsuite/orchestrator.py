@@ -1,4 +1,3 @@
-import logging
 import traceback
 import sys
 
@@ -9,7 +8,7 @@ import iotsuite.utils as utils
 from .utils import IoTSuiteError
 from .analysis import syscalls, net
 
-logger = logging.getLogger("orchestrator")
+logger = utils.logger.getChild("orchestrator")
 
 class AnalysisResult:
     """
@@ -51,7 +50,6 @@ class Orchestrator:
 
     def run_batch(self, samples, command):
         # run on a batch
-        print("batch!")
         utils.todo()
 
     def run_single(self, sample, command):

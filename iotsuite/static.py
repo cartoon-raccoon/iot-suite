@@ -12,7 +12,7 @@ from .config import Config
 import iotsuite.utils as utils
 from .utils import IoTSuiteError
 
-logger = logging.getLogger("static")
+logger = utils.logger.getChild("static")
 
 Strings = namedtuple('Strings', ['offset', 'string'])
 

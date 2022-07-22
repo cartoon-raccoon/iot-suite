@@ -12,6 +12,7 @@ from invoke.exceptions import UnexpectedExit, CommandTimedOut
 from .config import Config, QemuConfig
 from .arch import Arch, ARCH_CMDS
 from .utils import IoTSuiteError
+import iotsuite.utils as utils
 
 USER_PROMPT = "$ "
 ROOT_PROMPT = "# "
@@ -22,7 +23,7 @@ SUPPORTED_CMDS = ["quit", "loadvm", "savevm", "qmp_capabilities"]
 QMP_PATH = "localhost"
 QEMU_MONITOR_PROMPT = "(qemu)"
 
-logger = logging.getLogger("qemu")
+logger = utils.logger.getChild("qemu")
 
 class QMPCommand:
     """

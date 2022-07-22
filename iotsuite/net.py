@@ -3,8 +3,9 @@ import invoke
 import logging
 
 from .config import NetConfig
+import iotsuite.utils as utils
 
-logger = logging.getLogger("net")
+logger = utils.logger.getChild("net")
 
 class Table(Enum):
     NAT = "nat"
