@@ -38,7 +38,7 @@ However, IoTSuite is not without its limitations. These include:
 
 IoTSuite has the following architecture:
 
-[todo: insert image here]
+![iotsuite_arch](iotsuite_arch.png)
 
 It relies on a custom network infrastructure, and two main virtual machines running on QEMU, a system emulator. Firstly, the sandbox VM. This is a custom embedded Linux system built using Buildroot (more info in Setup). This is where the malware sample is run, and an orchestrator Python script runs locally on this machine to coordinate the analysis process. Secondly, the CNC VM. This is a standard Linux server distribution.
 
