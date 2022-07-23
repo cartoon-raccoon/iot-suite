@@ -1,11 +1,18 @@
 import re
-from collections import namedtuple
 
 from ..utils import logger as mainlog
 
 logger = mainlog.getChild("analysis-syscalls")
 
-Syscall = namedtuple("Syscall", ["syscall", "params", "result", "elaboration"])
+class Syscall:
+    """
+    Class representing a parsed syscall.
+    """
+    def __init__(self, syscall, params, result, elab):
+        self.syscall = syscall
+        self.params = params
+        self.result = result
+        self.elaboration = elab
 
 class SyscallAnalyzer:
 
@@ -15,22 +22,31 @@ class SyscallAnalyzer:
         self.main_regex = re.compile(self.SYSCALL_REGEX)
 
     def parse_syscalls(self, tracefile):
+        """
+        Parses all the syscalls made by process spawned by a sample.
+
+        Returns a tuple of (pid, syscalls).
+        """
+        
+        logger.debug(f"parsing syscall trace file '{tracefile}'")
         syscalls = []
 
         with open(tracefile, "r") as f:
             data = f.read(-1)
 
+        pid = tracefile.split(".")[1]
+
         res = self.main_regex.findall(data)
 
         for syscall, paramstr, result, elab in res:
             syscalls.append(Syscall(
-                syscall=syscall,
-                params=self._extract_params(paramstr),
-                result=self._cleanup_res(result),
-                elaboration=elab.strip()
+                syscall,
+                self._extract_params(paramstr),
+                self._cleanup_res(result),
+                elab.strip()
             ))
 
-        return syscalls
+        return pid, syscalls
 
     def _extract_params(self, paramstr):
         if len(paramstr) == 0:
