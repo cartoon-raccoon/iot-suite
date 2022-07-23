@@ -95,8 +95,14 @@ class IoTSuite:
         self.target = os.path.basename(self.target)
 
         self.orchestrator.run(self.target, self.command)
+        self.final = self.orchestrator.run_analysis()
 
         os.chdir(self.output_dir)
+
+        logger.info("Writing results to JSON")
+        # todo: fix the jank
+        with open("results.json", "w") as f:
+            f.write(self.final.export_as_json())
 
         # handle json and file output here
 
