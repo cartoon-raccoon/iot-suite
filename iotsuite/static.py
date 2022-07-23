@@ -16,9 +16,13 @@ logger = utils.logger.getChild("static")
 
 Strings = namedtuple('Strings', ['offset', 'string'])
 
-StaticResult = namedtuple("StaticResult", [
-    "hash", "ctph", "strings", "arch", "file"
-])
+class StaticResult:
+    def __init__(self, hash, ctph, strings, arch, file):
+        self.hash = hash
+        self.fuzzyhash = ctph
+        self.strings = strings
+        self.arch = arch
+        self.file = file
 
 class StaticError(IoTSuiteError):
     
@@ -75,14 +79,28 @@ class StaticAnalyzer:
 
     def sha256(self):
         """
-        Get the SHA256 hash of the sample.
+        Get the SHA256 hash of the sample as a string.
+        """
+        hash = hashlib.sha256(self.data)
+        return hash.hexdigest()
+
+    def sha256_raw(self):
+        """
+        Get the SHA256 hash of the sample as a bytestring.
         """
         hash = hashlib.sha256(self.data)
         return hash.digest()
 
     def md5(self):
         """
-        Get the MD5 hash of the sample.
+        Get the MD5 hash of the sample as a string.
+        """
+        hash = hashlib.md5(self.data)
+        return hash.hexdigest()
+
+    def md5_raw(self):
+        """
+        Get the SHA256 hash of the sample as a bytestring.
         """
         hash = hashlib.md5(self.data)
         return hash.digest()
@@ -124,11 +142,11 @@ class StaticAnalyzer:
     def run(self):
         logger.info("Running static analysis")
         return StaticResult(
-            hash=self.run_hash(),
-            ctph=None, #todo
-            strings=self.run_strings(),
-            arch=self.get_arch_enum(),
-            file=self.get_file()
+            self.run_hash(),
+            None, #todo (ctph)
+            self.run_strings(),
+            self.get_arch(),
+            self.get_file()
         )
 
     def _parse_strings(self, output):

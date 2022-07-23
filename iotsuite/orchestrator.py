@@ -117,7 +117,7 @@ class Orchestrator:
         final = AnalysisResult()
 
         if self._was_completed("static"):
-            pass
+            final["static"] = self.staticres
 
         if self._was_completed("dynamic"):
             logger.debug("running dynamic results analysis")
@@ -129,6 +129,8 @@ class Orchestrator:
             for trace in self.dynamicres.syscalls:
                 pid, syscall = self.syscalls.parse_syscalls(trace)
                 syscalls[pid] = syscall
+
+            # todo: parse everything else lmao
             
             final["syscalls"] = syscalls
 
