@@ -65,8 +65,10 @@ class StaticAnalyzer:
         hash = self.config.STATIC["HashType"]
 
         if hash.lower() == "sha256":
+            logger.info("Running hash of type sha256")
             return self.sha256()
         elif hash.lower() == "md5":
+            logger.info("Running hash of type md5")
             return self.md5()
         else:
             raise StaticError(f"unknown hash type: {hash}")
@@ -120,6 +122,7 @@ class StaticAnalyzer:
         return self.magic.from_file(self.sample)
 
     def run(self):
+        logger.info("Running static analysis")
         return StaticResult(
             hash=self.run_hash(),
             ctph=None, #todo

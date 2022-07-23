@@ -84,10 +84,10 @@ class DynamicAnalyzer:
         sudo_passwd = self.config.GENERAL["SudoPasswd"]
         iptables_rules = self.config.iptables()
         # set up the network
-        logger.debug("debug: setting up network")
+        logger.info("Setting up network")
         self.net.setup(sudo_passwd)
 
-        logger.debug("debug: adding iptables rules")
+        logger.info("Adding iptables rules")
         for rule in iptables_rules:
             self.net.append_iptables(rule)
 
@@ -103,9 +103,11 @@ class DynamicAnalyzer:
 
         try:
             # startup the vms
-            logger.debug("debug: starting noninteractive vm session")
+            logger.debug("starting noninteractive vm session")
+            logger.info("Starting sandbox VM")
             self.vm.noninteractive(vm_ssh)
-            logger.debug("debug: starting noninteractive c2 session")
+            logger.debug("starting noninteractive c2 session")
+            logger.info("Starting FakeC2 VM")
             self.cnc.noninteractive(c2_ssh)
 
         except QemuError as e:
@@ -119,12 +121,13 @@ class DynamicAnalyzer:
             raise e
 
         if not self.vm.config.qmp:
-            logger.debug("debug: taking vm snapshot")
+            logger.debug("taking vm snapshot")
             self.vm.snapshot("clean")
 
-        logger.debug("debug: running cnc pre-analysis commands")
+        logger.debug("running cnc pre-analysis commands")
+        logger.info("Preparing C2 VM for dynamic analysis")
         for cmd in CNC_PRE_COMMANDS:
-            logger.debug(f"debug: running command '{cmd}'")
+            logger.debug(f"running command '{cmd}'")
             res = self.cnc.run_cmd(cmd.cmd, wait=cmd.wait)
             if res.exitcode != 0:
                 logger.error(f"command '{cmd}' returned exitcode {res.exitcode}, errmsg '{res.output}'")
@@ -137,27 +140,29 @@ class DynamicAnalyzer:
 
         sudo_passwd = self.config.GENERAL["SudoPasswd"]
 
-        logger.debug("debug: running all cnc shutdown commands")
+        logger.debug("running all cnc shutdown commands")
+        logger.info("Preparing C2 VM for shutdown")
         for cmd in CNC_POST_COMMANDS:
             res = self.cnc.run_cmd(cmd.cmd, wait=cmd.wait)
             if res.exitcode != 0:
                 # don't raise error since we're shutting down the system anyway
                 logger.error(f"command '{cmd}' returned exitcode {res.exitcode} errmsg '{res.output}'")
         
-        logger.debug("debug: resetting sandbox vm")
+        logger.debug("resetting sandbox vm")
         self.vm.reset("clean")
 
         try:# shutdown the sandbox and cnc VMs
-            logger.debug("debug: stopping sandbox vm")
+            logger.info("Stopping sandbox VM")
             self.vm.stop(force=True)
-            logger.debug("debug: stopping c2 vm")
+            logger.info("Stopping FakeC2 VM")
             self.cnc.stop(force=True)
         except QemuError:
             self.vm.terminate_existing()
             self.cnc.terminate_existing()
 
+        logger.info("Shutting down network")
         # flush iptables
-        logger.debug("debug: flushing iptables")
+        logger.debug("flushing iptables")
         self.net.flush_iptables(sudo_passwd)
 
         logger.debug("tearing down network infrastructure")
@@ -238,6 +243,7 @@ class DynamicAnalyzer:
         packet capture files, and syscall traces.
         """
         # set up iotftp server and send sample over
+        logger.info("Loading sample onto sandbox VM")
         try:
             self.vm_iotftp_server()
             self.send_to_vm(sample, "")
@@ -252,6 +258,7 @@ class DynamicAnalyzer:
             wait=FAKEDNS_CMD.wait,
         )
         # run the analysis script
+        logger.info("Starting analysis...")
         res = self.vm.run_cmd(ANALYSE_SCRIPT_CMD.format(sample))
         # terminate fakedns on the cnc
         cncres = self.cnc.terminate_existing("python3")
@@ -261,9 +268,11 @@ class DynamicAnalyzer:
         result_files = self._extract_files(res.output)
 
         # todo: better logging of errors. PLEASE.
+        logger.info("Retrieving execution traces and files from VM")
         try:
             self.vm_iotftp_server()
             for file in result_files:
+                logger.info(f"Retrieving file: {file}")
                 try:
                     self.receive_from_vm(file, "", bye=False)
                 except Exception as e:
