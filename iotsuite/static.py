@@ -6,6 +6,7 @@ import logging
 from elftools.elf.elffile import ELFFile
 import magic
 import hashlib
+import ppdeep
 
 from .arch import *
 from .config import Config
@@ -111,9 +112,12 @@ class StaticAnalyzer:
         # may still be present but UPX magic is stripped
         utils.todo()
 
-    def run_ctph(self):
-        # todo
-        utils.todo()
+    def ctph(self):
+        """
+        Return the CTPH digest of the file data.
+        """
+        hash = ppdeep.hash(self.data)
+        return hash
 
     def get_arch(self):
         return self.elf.get_machine_arch()
@@ -143,7 +147,7 @@ class StaticAnalyzer:
         logger.info("Running static analysis")
         return StaticResult(
             self.run_hash(),
-            None, #todo (ctph)
+            self.ctph(),
             self.run_strings(),
             self.get_arch(),
             self.get_file()
