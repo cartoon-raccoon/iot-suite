@@ -56,3 +56,4 @@ IoTSuite requires the following Python libraries:
 - `pexpect` - library for interacting with programs through stdin
 - `fabric` - library for SSH communication on Python
 - `invoke` - library for invoking shell commands
+- `ppdeep` - a Python library for context-triggered piecewise hashing (CTPH)
