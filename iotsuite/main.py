@@ -12,6 +12,17 @@ import iotsuite.utils as utils
 
 SUBCMDS = ["full", "dynamic", "static"]
 
+# configuration keys that are also paths.
+_PATH_KEYS = [
+    "OutputDir",
+    "WorkingDir",
+    "PluginDir",
+    "Image",
+    "NicHelper",
+    "DHCPConf",
+    "UseFile",
+]
+
 logger = utils.logger.getChild("main")
 
 class IoTSuite:
@@ -43,6 +54,7 @@ class IoTSuite:
             raise IoTSuiteError(f"no such file or directory: {config}")
 
         self.config = Config(config)
+        self._verify_paths()
 
         if not os.path.exists(self.target):
             raise IoTSuiteError(f"no such file or directory: {self.target}")
@@ -109,6 +121,20 @@ class IoTSuite:
         os.chdir(self.invocation_dir)
 
         # handle finalization
+        return
+
+    def _verify_paths(self):
+        # verify that all paths are valid, and convert them to absolute paths
+        for section in self.config:
+            for key in _PATH_KEYS:
+                _absolutify(section, key)
+
+
+def _absolutify(section, key):
+    if section.has_key(key):
+        if os.path.exists(section[key]) and not os.path.isabs(section[key]):
+            section[key] = os.path.abspath(section[key])
+    else:
         return
 
 def _construct_parser():
