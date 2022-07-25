@@ -15,7 +15,8 @@ A Linux IOT malware sandbox designed for concurrency and bulk analysis.
 ### Build Requirements
 
 - Buildroot, a build system geared for creating embedded Linux systems (use the submodule in this repo, it contains required Perl modules)
-- Golang
+
+The documentation can be found [here](docs/1-overview.md).
 
 To clone this repository, run:
 
