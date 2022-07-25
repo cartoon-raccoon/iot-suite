@@ -437,6 +437,8 @@ class Qemu:
         """
         if self.started:
             raise QemuError("cannot perform offline reset while QEMU is running")
+
+        logger.debug(f"running offline reset on {self.image} to tag {tag}")
         
         self._run_qemu_img("-a", tag)
         
@@ -452,6 +454,8 @@ class Qemu:
 
         if self.started:
             raise QemuError("cannot perform offline snapshot while QEMU is running")
+
+        logger.debug(f"taking offline screenshot on {self.image} with tag {tag}")
 
         self._run_qemu_img("-c", tag)
     
@@ -473,15 +477,11 @@ class Qemu:
             self.proc.expect(f"{prompt}")
             logger.debug(f"output before: {self.proc.before}")
         except:
-            # todo: raise error
-            logger.error(f"error: could not login: got '{self.proc.before}'")
-            self.stop()
-            sys.exit(1)
+            raise QemuError(f"error: could not login: got '{self.proc.before}'")
 
     def _init_ssh(self, remote_ip, port=22):
         if not self._check_started():
-            # todo: raise error
-            return
+            raise QemuError("attempted to initialize ssh when not started")
         
         self._expect_login_prompt(self.config.login_prompt)
 
