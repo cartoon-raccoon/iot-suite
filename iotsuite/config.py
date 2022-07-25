@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import logging
 from functools import cached_property
+import itertools
 
 from .arch import Arch
 from .utils import IoTSuiteError
@@ -121,7 +122,9 @@ class Section:
     def __getitem__(self, item):
         """
         Returns the value of the `item` key in the section.
-        Returns `NoneType` if the key does not exist.
+        Works like a standard item retrieval but checks if a
+        parent section (if present) contains the key before
+        raising `KeyError` if the key does not exist.
 
         `item` should normally be a string, but this method will
         accept any type accepted by `ConfigParser`'s `__getitem__`
@@ -136,12 +139,24 @@ class Section:
                 try:
                     return self._global[item].strip('"')
                 except KeyError:
-                    # nothing even in global settings, return None
-                    return None
+                    # nothing even in global settings, raise error
+                    raise KeyError(f"missing key '{item}' in section {self._ty}")
             else:
                 # global settings don't exist for this section,
-                # return None
-                return None
+                # raise error
+                raise KeyError(f"missing key '{item}' in section {self._ty}")
+
+    def __setitem__(self, key, item):
+        # blindly do what they say, man
+        self._section[key] = item
+
+    def __iter__(self):
+        ret = [self[sec] for sec in self._section]
+
+        return itertools.chain(ret)
+
+    def has_key(self, key):
+        return key in self._section
 
     def item(self, item):
         """
@@ -177,7 +192,7 @@ class Section:
 
 class Config:
     """
-    A class representing the global configuration for IotSuite.
+    An iterable class representing the global configuration for IotSuite.
 
     This class wraps a `ConfigParser` that is used to directly parse
     the configuration file, and adds additional logic and method
@@ -189,6 +204,7 @@ class Config:
 
     - `GENERAL`, containing general uncategorized settings;
     - `STATIC`, containing settings for static analysis;
+    - `DYNAMIC`, containing settings for dynamic analysis;
     - `HEURISTICS`, containing settings for analysis of the collected data;
     - `CNC`, containing configuration settings for the fake
     C2 VM;
@@ -204,6 +220,9 @@ class Config:
     sections is to allow the user to define specific configurations for
     a specific architecture. All configuration settings accepted in
     `SANDBOX` will be overidden by the ones in these sections.
+
+    A `Config` can be iterated over, each time yielding a section. This
+    is useful for performing general operations on each section.
 
     For details on the API, see the methods.
     """
@@ -238,6 +257,14 @@ class Config:
             return self.cp[item]
         except KeyError:
             return None
+
+    def __iter__(self):
+        required = [getattr(self, sec) for sec in _REQUIRED]
+        archs = [
+            getattr(self, arch) for arch in _ARCHS if getattr(self, arch) is not None
+        ]
+
+        return itertools.chain(required, archs)
 
     @property
     def vm_qmp_port(self):
