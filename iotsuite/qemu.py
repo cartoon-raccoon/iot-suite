@@ -1,4 +1,5 @@
 import pexpect
+import subprocess
 import logging
 import shutil
 import socket
@@ -135,6 +136,10 @@ class Qemu:
     @property
     def arch(self):
         return self.config.arch
+
+    @property
+    def image(self):
+        return self.config.image
 
     @property
     def macaddr(self):
@@ -396,35 +401,67 @@ class Qemu:
 
         logger.debug(f"resetting qemu to state {tag}")
 
-        #todo: add check for architecture
         if self.config.qmp:
             logger.error("error: cannot perform system reset via QMP")
             self.send_qmp_cmd(QMPCommand("loadvm", tag=tag))
-        else:
+        elif not self.needs_offline_reset():
             self.send_qemu_command("loadvm", [tag])
+        else:
+            raise QemuError(f"architecture {self.arch} needs offline reset")
 
     def snapshot(self, tag):
         """
         Create a clean snapshot of a VM.
+
+        Raises `QemuError` if architecture is MIPS or MIPSEL, due to a bug
+        in the implementation of `qemu-system-mips{,el}` requiring the reset
+        to be performed offline using `qemu-img`, invoked via `offline_reset()`.
         """
+
+        logger.debug(f"taking snapshot with tag {tag}")
+
         if self.config.qmp:
             self.send_qmp_cmd(QMPCommand("savevm", tag=tag))
-        else:
+        elif not self.needs_offline_reset():
             self.send_qemu_command("savevm", [tag])
+        else:
+            raise QemuError(f"architecture {self.arch} needs offline snapshot")
 
-    def offline_reset(self):
+    def offline_reset(self, tag):
         """
         Reset to VM to a clean instance while not running.
 
         This has to be done for MIPS and MIPSEL sandboxes as there
-        is a bug in QEMU resulting in a segfault when `savevm` is run
+        is a bug in QEMU resulting in a segfault when `loadvm` is run
         on a live instance.
         """
         if self.started:
             raise QemuError("cannot perform offline reset while QEMU is running")
         
-        #todo
-        pass
+        self._run_qemu_img("-a", tag)
+        
+
+    def offline_snapshot(self, tag):
+        """
+        Create a clean snapshop of a VM while not running.
+
+        This has to be done for MIPS and MIPSEL sandboxes as there
+        is a bug in QEMU result in a segfault when `savevm` is run
+        on a live instance.
+        """
+
+        if self.started:
+            raise QemuError("cannot perform offline snapshot while QEMU is running")
+
+        self._run_qemu_img("-c", tag)
+    
+    def needs_offline_reset(self):
+        """
+        Returns `True` if the QEMU instance needs to be reset offline.
+        """
+        return (
+            self.arch == Arch.MIPS or self.arch == Arch.MIPSEL
+        )
 
     #! ================== PRIVATE METHODS ===================
 
@@ -497,6 +534,12 @@ class Qemu:
 
         if self.proc.expect(self.prompt) != 0:
             raise QemuError("did not receive qemu prompt")
+
+    def _run_qemu_img(self, action, tag):
+        # todo: BETTER ERROR HANDLING GOOD GOD
+        subprocess.run(
+            ["qemu-img", "snapshot", action, tag, f"{self.image}/rootfs.qcow2"]
+        )
     
     def _startup(self):
         # set up the additional arguments needed to run the sandbox

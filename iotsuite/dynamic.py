@@ -65,6 +65,7 @@ class DynamicAnalyzer:
 
         self.config = config
 
+        # todo: perform check that none of these fields are None
         iftpconf = (
             config.SANDBOX["IpAddr"],
             config.NETWORK["FileTrfPort"],
@@ -81,7 +82,12 @@ class DynamicAnalyzer:
         Starts the network infrastructure, as well as the sandbox and CNC VMs.
         """
         
-        sudo_passwd = self.config.GENERAL["SudoPasswd"]
+        try:
+            sudo_passwd = self.config.GENERAL["SudoPasswd"]
+        except KeyError:
+            logger.warn("no sudo password provided, some commands may fail!")
+            sudo_passwd = ""
+
         iptables_rules = self.config.iptables()
         # set up the network
         logger.info("Setting up network")
@@ -101,6 +107,10 @@ class DynamicAnalyzer:
         else:
             c2_ssh = None
 
+        #? how will this affect when running in batches?
+        if self.vm.needs_offline_reset():
+            self.vm.offline_snapshot("clean")
+
         try:
             # startup the vms
             logger.debug("starting noninteractive vm session")
@@ -118,9 +128,8 @@ class DynamicAnalyzer:
             raise e
         except Exception as e:
             logger.error(f"an error occurred while setting up: {e}")
-            raise e
 
-        if not self.vm.config.qmp:
+        if not self.vm.config.qmp and not self.vm.needs_offline_reset():
             logger.debug("taking vm snapshot")
             self.vm.snapshot("clean")
 
@@ -149,9 +158,12 @@ class DynamicAnalyzer:
                 logger.error(f"command '{cmd}' returned exitcode {res.exitcode} errmsg '{res.output}'")
         
         logger.debug("resetting sandbox vm")
-        self.vm.reset("clean")
+        
+        # if our vm doesn't need an offline reset, run the reset live
+        if not self.vm.needs_offline_reset():
+            self.vm.reset("clean")
 
-        try:# shutdown the sandbox and cnc VMs
+        try: # shutdown the sandbox and cnc VMs
             logger.info("Stopping sandbox VM")
             self.vm.stop(force=True)
             logger.info("Stopping FakeC2 VM")
@@ -159,6 +171,10 @@ class DynamicAnalyzer:
         except QemuError:
             self.vm.terminate_existing()
             self.cnc.terminate_existing()
+
+        # if our vm needs offline reset, do it now
+        if self.vm.needs_offline_reset():
+            self.vm.offline_reset("clean")
 
         logger.info("Shutting down network")
         # flush iptables
