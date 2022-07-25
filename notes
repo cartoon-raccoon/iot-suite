@@ -39,6 +39,11 @@ subcommands:
   full    --transfer/-x [FTP|SCP]
   qemu    --comms/-c [STDIO|SSH]
 
+arguments:
+  -v, --verbose
+  -q, --quiet
+  -e, --export (pickle, json, text)
+
 ISSUES:
   not particularly robust, unable to properly handle many unusual cases
 
@@ -98,6 +103,8 @@ BEFORE I LEAVE:
 
   better logging and UX
 
+  add support for result serialization as pickle and text (JSON done)
+
   add API for user-defined plugins
 
   add reset functionality for MIPS and MIPSEL vms via qemu-img
@@ -105,3 +112,5 @@ BEFORE I LEAVE:
   add CTPH functionality and UPX packing detection
 
   add inotify functionality to analyse script
+
+  add checking for config fields when using them
