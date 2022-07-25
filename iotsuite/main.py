@@ -134,6 +134,8 @@ def _absolutify(section, key):
     if section.has_key(key):
         if os.path.exists(section[key]) and not os.path.isabs(section[key]):
             section[key] = os.path.abspath(section[key])
+        else:
+            raise IoTSuiteError(f"directory or file {section[key]} does not exist")
     else:
         return
 
