@@ -45,6 +45,8 @@ class IoTSuite:
         else:
             utils.logger.setLevel(logging.INFO)
 
+        logger.debug(f"got args {args}")
+
         if args.config is not None:
             config = args.config
         else:
@@ -166,13 +168,17 @@ def _construct_parser():
         sub.add_argument("file", type=str)
         sub.add_argument(
             "-c", "--config", action="store",
-            help="")
+            help="the configuration file to use")
         sub.add_argument(
             "-v", "--verbose", action="store_true",
-            help="")
+            help="extra output to see what's happening")
         sub.add_argument(
             "-q", "--quiet", action="store_true",
-            help="")
+            help="restrict output to warnings and errors only")
+        sub.add_argument(
+            "-s", "--sudo-passwd", action="store",
+            help="specify a sudo password to use"
+        )
 
     return ap, subcmds
 
