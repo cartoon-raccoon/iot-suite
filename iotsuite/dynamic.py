@@ -97,12 +97,12 @@ class DynamicAnalyzer:
         for rule in iptables_rules:
             self.net.append_iptables(rule)
 
-        if self.config.SANDBOX.ssh():
+        if self.config.SANDBOX.ssh:
             vm_ssh = (self.config.SANDBOX["IpAddr"], int(self.config.SANDBOX["SSHPort"]))
         else:
             vm_ssh = None
 
-        if self.config.CNC.ssh():
+        if self.config.CNC.ssh:
             c2_ssh = (self.config.CNC["IpAddr"], int(self.config.CNC["SSHPort"]))
         else:
             c2_ssh = None
@@ -123,8 +123,8 @@ class DynamicAnalyzer:
         except QemuError as e:
             logger.error(f"an error occurred while starting the VMs: {e}")
             self.net.teardown(sudo_passwd)
-            self.vm.stop()
-            self.cnc.stop()
+            self.vm.stop(force=True)
+            self.cnc.stop(force=True)
             raise e
         except Exception as e:
             logger.error(f"an error occurred while setting up: {e}")
@@ -146,16 +146,21 @@ class DynamicAnalyzer:
         """
         Shuts down the network infrastructure and VMs.
         """
+        logger.info("Shutting down infrastructure...")
 
         sudo_passwd = self.config.GENERAL["SudoPasswd"]
 
         logger.debug("running all cnc shutdown commands")
         logger.info("Preparing C2 VM for shutdown")
         for cmd in CNC_POST_COMMANDS:
-            res = self.cnc.run_cmd(cmd.cmd, wait=cmd.wait)
-            if res.exitcode != 0:
-                # don't raise error since we're shutting down the system anyway
-                logger.error(f"command '{cmd}' returned exitcode {res.exitcode} errmsg '{res.output}'")
+            try:
+                res = self.cnc.run_cmd(cmd.cmd, wait=cmd.wait)
+
+                if res.exitcode != 0:
+                    # don't raise error since we're shutting down the system anyway
+                    logger.error(f"command '{cmd}' exited with {res.exitcode}, errmsg '{res.output}'")
+            except QemuError:
+                pass
         
         logger.debug("resetting sandbox vm")
         

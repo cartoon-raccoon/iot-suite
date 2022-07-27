@@ -1,4 +1,3 @@
-import traceback
 import sys
 import json
 
@@ -76,6 +75,7 @@ class Orchestrator:
 
     def run_batch(self, samples, command):
         # run on a batch
+        logger.debug(f"running batch on dir {samples}")
         utils.todo()
 
     def run_single(self, sample, command):
@@ -88,25 +88,31 @@ class Orchestrator:
         # todo: run analysis
 
     def run_static(self, sample):
-        # run the static and dynamic analysis
+        logger.debug("running static analysis")
+
         self.static.set_sample(sample)
         return self.static.run()
 
     def run_dynamic(self, sample):
+        logger.debug("running dynamic analysis")
+
         self.static.set_sample(sample)
         arch = self.static.get_arch_enum()
 
-        logger.info(f"Sample has architecture {self.static.get_arch()}")
+        logger.info(
+            f"Sample has architecture {self.static.get_arch_enum().value}"
+        )
 
         self.dynamic = DynamicAnalyzer(arch, self.config)
         try: # todo: better error handling my god
             self.dynamic.startup()
             res = self.dynamic.run(sample)
             logger.debug(f"{res}")
-        except Exception as e:
-            logger.error(f"{traceback.print_tb(sys.exc_info()[2])}\n{e}")
+        except KeyboardInterrupt:
+            logger.warn("Received Ctrl-C, stopping...")
             self.dynamic.shutdown()
-
+            sys.exit(0)
+        except Exception as e:
             raise IoTSuiteError(f"{e}")
 
         self.dynamic.shutdown()

@@ -1,3 +1,4 @@
+from xml.dom.minidom import Attr
 import pexpect
 import subprocess
 import logging
@@ -5,7 +6,6 @@ import shutil
 import socket
 import json
 import time
-import sys
 
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit, CommandTimedOut
@@ -117,7 +117,9 @@ class Qemu:
             ]
         
         self.config = config
-        self.started = False
+        self._started = False
+        self.ssh = None
+        self.proc = None
         self.is_interactive = True
 
         # the currently running job, if run asynchronously.
@@ -148,6 +150,13 @@ class Qemu:
     @property
     def helper(self):
         return self.config.nic_helper
+
+    @property
+    def started(self):
+        try:
+            return self._started
+        except AttributeError:
+            return False
 
     def interactive(self, ssh=None):
         """
@@ -382,13 +391,13 @@ class Qemu:
             self.qmp.close()
 
             self.proc.expect(pexpect.EOF)
-            self.started = False
 
         else:
             self._enter_qemu_monitor()
             self.proc.sendline("quit")
 
-        delattr(self, "proc")
+        self._started = False
+        self.proc = None
 
     def reset(self, tag):
         """
@@ -402,7 +411,7 @@ class Qemu:
         logger.debug(f"resetting qemu to state {tag}")
 
         if self.config.qmp:
-            logger.error("error: cannot perform system reset via QMP")
+            logger.error("cannot perform system reset via QMP")
             self.send_qmp_cmd(QMPCommand("loadvm", tag=tag))
         elif not self.needs_offline_reset():
             self.send_qemu_command("loadvm", [tag])
@@ -476,8 +485,10 @@ class Qemu:
         try:
             self.proc.expect(f"{prompt}")
             logger.debug(f"output before: {self.proc.before}")
-        except:
-            raise QemuError(f"error: could not login: got '{self.proc.before}'")
+        except pexpect.EOF:
+            raise QemuError(f"unexpected EOF when waiting for login")
+        except pexpect.TIMEOUT:
+            raise QemuError(f"expect timed out while waiting for login prompt")
 
     def _init_ssh(self, remote_ip, port=22):
         if not self._check_started():
@@ -551,7 +562,7 @@ class Qemu:
             maxread=1,
             timeout=self.config.timeout
         )
-        self.started = True
+        self._started = True
 
         # sleep for a second to give the VM time to start up the QMP server
         time.sleep(1)
