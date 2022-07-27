@@ -16,11 +16,11 @@ else
 fi
 
 exec qemu-system-mipsel \
-    -M malta -cpu mips32r6-generic \
+    -M malta \
     -kernel kernel.img \
     -drive file=rootfs.qcow2,format=qcow2 \
     -append "rootwait root=/dev/sda quiet" \
-    -nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:02:12:34:56 \
+    -nic tap,model=pcnet,helper=/usr/lib/qemu/qemu-bridge-helper,mac=52:54:01:12:34:56 \
     -serial mon:stdio \
     -nographic  ${EXTRA_ARGS}
 
