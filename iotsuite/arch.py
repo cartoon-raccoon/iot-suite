@@ -56,14 +56,14 @@ class Arch(Enum):
                 "-nic", f"tap,model=rtl8139,helper={helper},mac={macaddr}"
             ],
             Arch.MIPS : [
-                "-M", "malta", "-cpu", "mips32r6-generic",
+                "-M", "malta",
                 "-kernel", "{}/kernel.img",
                 "-drive", "file={}/rootfs.qcow2,format=qcow2",
                 "-append", "rootwait quiet root=/dev/sda",
                 "-nic", f"tap,model=pcnet,helper={helper},mac={macaddr}"
             ],
             Arch.MIPSEL : [
-                "-M", "malta", "-cpu", "mips32r6-generic",
+                "-M", "malta",
                 "-kernel", "{}/kernel.img",
                 "-drive", "file={}/rootfs.qcow2,format=qcow2",
                 "-append", "rootwait quiet root=/dev/sda",
