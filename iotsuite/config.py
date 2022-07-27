@@ -5,8 +5,9 @@ import itertools
 
 from .arch import Arch
 from .utils import IoTSuiteError
+import iotsuite.utils as utils
 
-logger = logging.getLogger("config")
+logger = utils.logger.getChild("config")
 
 # Config sections
 GENERAL = "GENERAL"
@@ -151,9 +152,7 @@ class Section:
         self._section[key] = item
 
     def __iter__(self):
-        ret = [self[sec] for sec in self._section]
-
-        return itertools.chain(ret)
+        return itertools.chain([self[sec] for sec in self._section])
 
     def has_key(self, key):
         return key in self._section
@@ -164,12 +163,14 @@ class Section:
         """
         return self[item]
 
+    @property
     def ssh(self):
         """
         Convenience method to check whether a Section has SSH enabled.
         """
         return self.check_enabled("SSH")
-
+    
+    @property
     def qmp(self):
         """
         Convenience method to check whether a Section has QMP enabled.
@@ -185,10 +186,12 @@ class Section:
         Values that evaluate to `True` are `yes` and `true`, non case-sensitive.
         All other values evaluate to `False`.
         """
-        maybe = self[maybe]
-
-        return maybe is not None \
-        and (maybe.lower() == "yes" or maybe.lower() == "true")
+        try:
+            maybe = self[maybe]
+        except KeyError:
+            return False
+        else:
+            return (maybe.lower() == "yes" or maybe.lower() == "true")
 
 class Config:
     """
@@ -326,7 +329,7 @@ class Config:
                 cnc["MacAddr"],
                 int(cnc["ExpTimeout"]),
                 cnc["LoginPrompt"],
-                qmp_port=int(cnc["QMPPort"]),qmp=cnc.qmp()
+                qmp_port=int(cnc["QMPPort"]),qmp=cnc.qmp
             )
         except AttributeError as e:
             raise e
@@ -357,7 +360,7 @@ class Config:
                 arch_config["MacAddr"],
                 int(arch_config["ExpTimeout"]),
                 arch_config["LoginPrompt"],
-                qmp_port=qmp_port, qmp=arch_config.qmp()
+                qmp_port=qmp_port, qmp=arch_config.qmp
             )
         except AttributeError as e:
             logger.error("attribute error when creating sandbox config")
@@ -365,8 +368,20 @@ class Config:
             raise e
 
     def iptables(self):
+        """
+        Parses a file of `iptables` rules.
+        """
         #todo: parse iptables and return a list of IptablesRule
         return []
+
+    def has_arch(self, arch):
+        """
+        Returns `True` if the given `arch` has a section in the config file.
+        """
+        if isinstance(arch, Arch):
+            arch = arch.value
+
+        return arch in self.cp
     
     def arch(self, arch):
         """
