@@ -88,9 +88,10 @@ class IoTSuite:
 
     def run(self):
         # set up the working directory
-        working_dir = self.config.GENERAL["WorkingDir"]
+        try:
+            working_dir = self.config.GENERAL["WorkingDir"]
         # defaults to $XDH_CACHE_HOME/iotsuite if not found
-        if working_dir is None:
+        except KeyError:
             self.working_dir = f"{BaseDirectory.xdg_cache_home}/iotsuite"
             if not os.path_exists(self.working_dir):
                 os.mkdir(self.working_dir)
@@ -132,10 +133,10 @@ class IoTSuite:
 
 def _absolutify(section, key):
     if section.has_key(key):
-        if os.path.exists(section[key]) and not os.path.isabs(section[key]):
-            section[key] = os.path.abspath(section[key])
-        else:
+        if not os.path.exists(section[key]):
             raise IoTSuiteError(f"directory or file {section[key]} does not exist")
+        elif not os.path.isabs(section[key]):
+            section[key] = os.path.abspath(section[key])
     else:
         return
 
