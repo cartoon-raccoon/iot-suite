@@ -1,8 +1,9 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Buildroot 2022.02-353-g756d79b44a Configuration
+# Buildroot 2022.02-605-ge1f867dd31 Configuration
 #
 BR2_HAVE_DOT_CONFIG=y
+BR2_EXTERNAL_iotsuite_PATH="/home/sammy/Projects/iot-suite/br-external"
 BR2_HOST_GCC_AT_LEAST_4_9=y
 BR2_HOST_GCC_AT_LEAST_5=y
 BR2_HOST_GCC_AT_LEAST_6=y
@@ -686,7 +687,7 @@ BR2_PACKAGE_STRACE=y
 # BR2_PACKAGE_STRESS_NG is not set
 
 #
-# sysdig needs a glibc or uclibc toolchain w/ C++, threads, gcc >= 4.8, dynamic library, a Linux kernel, and luajit or lua 5.1 to be built
+# sysdig needs a glibc toolchain w/ C++, threads, gcc >= 4.8, dynamic library, a Linux kernel, and luajit or lua 5.1 to be built
 #
 # BR2_PACKAGE_TINYMEMBENCH is not set
 # BR2_PACKAGE_TRACE_CMD is not set
@@ -1041,7 +1042,6 @@ BR2_PACKAGE_FLASHROM_ARCH_SUPPORTS=y
 # BR2_PACKAGE_LSUIO is not set
 # BR2_PACKAGE_LUKSMETA is not set
 # BR2_PACKAGE_LVM2 is not set
-# BR2_PACKAGE_MALI_DRIVER is not set
 # BR2_PACKAGE_MBPFAN is not set
 # BR2_PACKAGE_MDADM is not set
 # BR2_PACKAGE_MDEVD is not set
@@ -1637,7 +1637,7 @@ BR2_PACKAGE_PYTHON_IPTABLES=y
 # BR2_PACKAGE_PYTHON_MWSCRAPE2SLOB is not set
 # BR2_PACKAGE_PYTHON_NESTED_DICT is not set
 # BR2_PACKAGE_PYTHON_NETADDR is not set
-# BR2_PACKAGE_PYTHON_NETIFACES is not set
+BR2_PACKAGE_PYTHON_NETIFACES=y
 # BR2_PACKAGE_PYTHON_NETWORKX is not set
 BR2_PACKAGE_PYTHON_NUMPY_ARCH_SUPPORTS=y
 
@@ -2648,6 +2648,7 @@ BR2_PACKAGE_MUSL_FTS=y
 # BR2_PACKAGE_P11_KIT is not set
 BR2_PACKAGE_POCO_ARCH_SUPPORTS=y
 # BR2_PACKAGE_POCO is not set
+BR2_PACKAGE_HOST_PROTOBUF_ARCH_SUPPORTS=y
 BR2_PACKAGE_PROTOBUF_ARCH_SUPPORTS=y
 # BR2_PACKAGE_PROTOBUF is not set
 # BR2_PACKAGE_PROTOBUF_C is not set
@@ -2658,6 +2659,10 @@ BR2_PACKAGE_PROTOBUF_ARCH_SUPPORTS=y
 # BR2_PACKAGE_SHAPELIB is not set
 # BR2_PACKAGE_SKALIBS is not set
 # BR2_PACKAGE_SPHINXBASE is not set
+
+#
+# tbb needs a glibc or musl toolchain w/ dynamic library, threads, C++
+#
 # BR2_PACKAGE_TINYCBOR is not set
 # BR2_PACKAGE_UVW is not set
 # BR2_PACKAGE_XAPIAN is not set
@@ -3319,6 +3324,7 @@ BR2_PACKAGE_UTIL_LINUX_LIBUUID=y
 # BR2_PACKAGE_UTIL_LINUX_FSCK is not set
 # BR2_PACKAGE_UTIL_LINUX_HARDLINK is not set
 # BR2_PACKAGE_UTIL_LINUX_HWCLOCK is not set
+# BR2_PACKAGE_UTIL_LINUX_IPCMK is not set
 # BR2_PACKAGE_UTIL_LINUX_IPCRM is not set
 # BR2_PACKAGE_UTIL_LINUX_IPCS is not set
 # BR2_PACKAGE_UTIL_LINUX_KILL is not set
@@ -3327,6 +3333,7 @@ BR2_PACKAGE_UTIL_LINUX_LIBUUID=y
 # BR2_PACKAGE_UTIL_LINUX_LOGGER is not set
 # BR2_PACKAGE_UTIL_LINUX_LOGIN is not set
 # BR2_PACKAGE_UTIL_LINUX_LOSETUP is not set
+# BR2_PACKAGE_UTIL_LINUX_LSFD is not set
 # BR2_PACKAGE_UTIL_LINUX_LSLOGINS is not set
 # BR2_PACKAGE_UTIL_LINUX_LSMEM is not set
 # BR2_PACKAGE_UTIL_LINUX_MESG is not set
@@ -3415,7 +3422,6 @@ BR2_TARGET_ROOTFS_EXT2_NONE=y
 # BR2_TARGET_ROOTFS_F2FS is not set
 # BR2_TARGET_ROOTFS_INITRAMFS is not set
 # BR2_TARGET_ROOTFS_JFFS2 is not set
-# BR2_TARGET_ROOTFS_OCI is not set
 # BR2_TARGET_ROOTFS_ROMFS is not set
 # BR2_TARGET_ROOTFS_SQUASHFS is not set
 # BR2_TARGET_ROOTFS_TAR is not set
@@ -3539,6 +3545,11 @@ BR2_PACKAGE_HOST_UTIL_LINUX=y
 #
 # Legacy config options
 #
+
+#
+# Legacy options removed in 2022.05
+#
+# BR2_PACKAGE_BOOST_LAYOUT_VERSIONED is not set
 
 #
 # Legacy options removed in 2022.02
