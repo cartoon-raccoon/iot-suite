@@ -8,7 +8,8 @@ class Syscall:
     """
     Class representing a parsed syscall.
     """
-    def __init__(self, syscall, params, result, elab):
+    def __init__(self, timestamp, syscall, params, result, elab):
+        self.timestamp = timestamp
         self.syscall = syscall
         self.params = params
         self.result = result
@@ -16,7 +17,9 @@ class Syscall:
 
 class SyscallAnalyzer:
 
-    SYSCALL_REGEX = r"([_a-zA-Z0-9]+)\((.*)\) *(= -?[0-9x]+) ?(.*)"
+    # regex link: https://regex101.com/r/uuTh5j/1
+    # breakdown:       [  timestamp  ]  [syscall name] [params]  [  result  ]  [msg]
+    SYSCALL_REGEX = r"([0-9]+.[0-9]+) *([_a-zA-Z0-9]+)\((.*)\) *(= -?[0-9x]+) ?(.*)"
 
     def __init__(self):
         self.main_regex = re.compile(self.SYSCALL_REGEX)
@@ -38,8 +41,9 @@ class SyscallAnalyzer:
 
         res = self.main_regex.findall(data)
 
-        for syscall, paramstr, result, elab in res:
+        for timestamp, syscall, paramstr, result, elab in res:
             syscalls.append(Syscall(
+                float(timestamp),
                 syscall,
                 self._extract_params(paramstr),
                 self._cleanup_res(result),
