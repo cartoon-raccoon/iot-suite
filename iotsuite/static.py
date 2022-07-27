@@ -67,13 +67,19 @@ class StaticAnalyzer:
         return self._parse_strings(output)
 
     def run_hash(self):
-        hash = self.config.STATIC["HashType"]
+        try:
+            hash = self.config.STATIC["HashType"]
+        except KeyError:
+            hash = "sha256"
 
         if hash.lower() == "sha256":
-            logger.info("Running hash of type sha256")
+            logger.info("Running SHA256 hash")
             return self.sha256()
+        elif hash.lower() == "sha1":
+            logger.info("Running SHA1 hash")
+            return self.sha1()
         elif hash.lower() == "md5":
-            logger.info("Running hash of type md5")
+            logger.info("Running MD5 hash")
             return self.md5()
         else:
             raise StaticError(f"unknown hash type: {hash}")
@@ -90,6 +96,20 @@ class StaticAnalyzer:
         Get the SHA256 hash of the sample as a bytestring.
         """
         hash = hashlib.sha256(self.data)
+        return hash.digest()
+
+    def sha1(self):
+        """
+        Get the SHA1 hash of the sample as a string.
+        """
+        hash = hashlib.sha1(self.data)
+        return hash.hexdigest()
+
+    def sha1_raw(self):
+        """
+        Get the SHA1 hash of the sample as bytestring.
+        """
+        hash = hashlib.sha1(self.data)
         return hash.digest()
 
     def md5(self):
