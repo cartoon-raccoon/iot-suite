@@ -39,7 +39,7 @@ class AnalysisResult:
         # todo: fix the jank
         return json.dumps(self, 
             default=lambda o: o.__dict__, 
-            sort_keys=True,
+            sort_keys=False,
             indent=4
         )
 
@@ -51,6 +51,11 @@ class Orchestrator:
         self.config = config
         self.net_analyzer = net.NetAnalyzer()
         self.syscalls = syscalls.SyscallAnalyzer()
+
+        try: # todo: more robust code, please
+            self.disallowed = config.GENERAL["DisallowArchs"].split(",")
+        except KeyError:
+            self.disallowed = []
 
         if "batch" in params and params["batch"]:
             self.batch = True
@@ -79,6 +84,12 @@ class Orchestrator:
         utils.todo()
 
     def run_single(self, sample, command):
+        self.static.set_sample(sample)
+        arch = self.static.get_arch_enum()
+
+        if arch.value in self.disallowed:
+            raise IoTSuiteError(f"architecture {arch.value} is currently disallowed")
+        
         if command != "dynamic":
             self.staticres = self.run_static(sample)
         
@@ -102,20 +113,24 @@ class Orchestrator:
         logger.info(
             f"Sample has architecture {self.static.get_arch_enum().value}"
         )
+        try:
+            self.dynamic = DynamicAnalyzer(arch, self.config)
+        except Exception as e:
+            raise IoTSuiteError(f"{e}")
 
-        self.dynamic = DynamicAnalyzer(arch, self.config)
-        try: # todo: better error handling my god
+        try:
             self.dynamic.startup()
             res = self.dynamic.run(sample)
             logger.debug(f"{res}")
         except KeyboardInterrupt:
-            logger.warn("Received Ctrl-C, stopping...")
-            self.dynamic.shutdown()
+            logger.warning("Received Ctrl-C, stopping...")
             sys.exit(0)
+        except IoTSuiteError as e:
+            raise e
         except Exception as e:
             raise IoTSuiteError(f"{e}")
-
-        self.dynamic.shutdown()
+        finally:
+            self.dynamic.shutdown()
 
         return res
 
@@ -127,6 +142,10 @@ class Orchestrator:
 
         if self._was_completed("dynamic"):
             logger.debug("running dynamic results analysis")
+
+            final["start"] = self.dynamicres.start
+            final["end"] = self.dynamicres.end
+
             # run syscall analysis
             syscalls = dict()
 
