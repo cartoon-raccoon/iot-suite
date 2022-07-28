@@ -47,10 +47,12 @@ arguments:
 ISSUES:
   not particularly robust, unable to properly handle many unusual cases
 
-  no type safety when performing type casts, i.e. converting strings to ints
+  some samples compiled for a certain architecture variant may not work
+  on the same architecture used by the sandbox (i.e. MIPS-I samples will
+  not work with a sandbox VM using MIPS32R6, ARM samples may have different
+  embedded ABIs and may not work on the ARM machine)
 
-  the ARM machine only accepts samples with a specific EABI, other ARM samples
-  will throw strace off and result in bad data
+  no type safety when performing type casts, i.e. converting strings to ints
 
 BUGS:
   if QEMU is asked to load a snapshot that does not exist on a QCOW2 file,
@@ -62,14 +64,12 @@ BUGS:
   QEMU segfaults when loading a live snapshot on MIPS and MIPSEL architectures,
   necessitating these VMs to be reset offline via qemu-img
 
-  shell prompt on the sandbox machine is '# ', so comments in python files and shell
-  scripts can be interpreted by pexpect as the new prompt, thereby terminating a
-  running command prematurely
+  shell prompt on the sandbox machine is '# ', so comments in python files and
+  shell scripts can be interpreted by pexpect as the new prompt, thereby
+  terminating a running command prematurely
 
 TODO: # arranged in order of priority
-  add reset functionality for MIPS and MIPSEL vms via qemu-img
-
-  add CTPH functionality and UPX packing detection
+  add UPX packing detection
 
   add inotify functionality to analyse script
 
@@ -78,6 +78,10 @@ TODO: # arranged in order of priority
   implement rest of iotftp commands; add mkdir functionality to create new paths
 
   add fakenet-style redirection of ip addresses using iptables-nfqueue
+
+  add list of command line arguments to try when invoking sample
+
+  add functionality to load c2 sample onto fakec2
 
   add collation of IP addresses from PCAP file
 
@@ -99,18 +103,16 @@ TODO: # arranged in order of priority
   allow overriding of config settings via command-line arguments
 
 BEFORE I LEAVE:
-  implement orchestration and fully automate process
-
   better logging and UX
+
+  add convenience scripts for building vm images
 
   add support for result serialization as pickle and text (JSON done)
 
   add API for user-defined plugins
 
-  add reset functionality for MIPS and MIPSEL vms via qemu-img
-
-  add CTPH functionality and UPX packing detection
+  add UPX packing detection
 
   add inotify functionality to analyse script
 
-  add checking for config fields when using them
+  ensure all config fields are fully honoured
