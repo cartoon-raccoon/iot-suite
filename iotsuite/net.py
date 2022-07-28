@@ -4,8 +4,15 @@ import logging
 
 from .config import NetConfig
 import iotsuite.utils as utils
+from .utils import IoTSuiteError
 
 logger = utils.logger.getChild("net")
+
+class NetError(IoTSuiteError):
+    """
+    An error that occurs while running operations on the network.
+    """
+    pass
 
 class Table(Enum):
     NAT = "nat"
@@ -135,28 +142,35 @@ class Net:
         self.iptables = []
 
     def setup(self, sudo_passwd):
-        logger.debug(f"adding bridge {self.bridge}")
-        invoke.sudo(f"ip link add {self.bridge} type bridge", password=sudo_passwd)
-        
-        logger.debug(f"setting up bridge {self.bridge}")
-        invoke.sudo(f"ip link set {self.bridge} up", password=sudo_passwd)
+        to_run = {
+            f"adding bridge {self.bridge}" : f"ip link add {self.bridge} type bridge",
+            f"setting up bridge {self.bridge}" : f"ip link set {self.bridge} up",
+            f"adding IP address to bridge {self.bridge}" : f"ip addr add {self.ipaddr}/24 brd + dev {self.bridge}",
+            f"starting dhcpd with configuration file {self.dhcpconf}" : f"dhcpd -cf {self.dhcpconf}",
+        }
 
-        logger.debug(f"adding IP address to bridge {self.bridge}")
-        invoke.sudo(f"ip addr add {self.ipaddr}/24 brd + dev {self.bridge}", password=sudo_passwd)
-
-        logger.debug(f"starting dhcpd with configuration file {self.dhcpconf}")
-        invoke.sudo(f"dhcpd -cf {self.dhcpconf}", password=sudo_passwd, hide=True)
+        for debug, cmd in to_run.items():
+            try:
+                logger.debug(debug)
+                invoke.sudo(cmd, password=sudo_passwd, hide=True)
+            except invoke.UnexpectedExit as e:
+                logger.debug(f"encountered error while setting up net:\n{e}")
+                raise NetError(f"error while running command '{cmd}'")
 
     def teardown(self, sudo_passwd):
         # flush iptables
         # kill dhcpd
         # remove bridge interface
-        logger.debug("tearing down net")
-        invoke.sudo("pkill dhcpd", password=sudo_passwd)
+        try:
+            logger.debug("tearing down net")
+            invoke.sudo("pkill dhcpd", password=sudo_passwd)
 
-        logger.debug("dhcpd killed, deleting devices")
-        invoke.sudo(f"ip link set {self.bridge} down", password=sudo_passwd)
-        invoke.sudo(f"ip link delete {self.bridge} type bridge", password=sudo_passwd)
+            logger.debug("dhcpd killed, deleting devices")
+            invoke.sudo(f"ip link set {self.bridge} down", password=sudo_passwd)
+            invoke.sudo(f"ip link delete {self.bridge} type bridge", password=sudo_passwd)
+        except invoke.UnexpectedExit as e:
+            logger.debug(f"encountered error while tearing down net:\n{e}")
+            raise NetError(f"error while running tearing down net")
 
     def generate_dhcpconf(self):
         """
@@ -176,11 +190,8 @@ class Net:
         invoke.sudo(f"iptables -t {table.value} -F", password=sudo_passwd)
 
 if __name__ == "__main__":
-    SUDO_PASSWD = "03032001"
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     logger.addHandler(handler)
 
     net = Net("br0", "../configs/dhcpd.conf", "192.168.0.1")
-    net.setup(SUDO_PASSWD)
-    net.teardown(SUDO_PASSWD)

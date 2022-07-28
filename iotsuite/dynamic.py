@@ -109,7 +109,10 @@ class DynamicAnalyzer:
         iptables_rules = self.config.iptables()
         # set up the network
         logger.info("Setting up network")
-        self.net.setup(sudo_passwd)
+        try:
+            self.net.setup(sudo_passwd)
+        except IoTSuiteError as e:
+            raise e
 
         logger.info("Adding iptables rules")
         for rule in iptables_rules:
@@ -205,7 +208,10 @@ class DynamicAnalyzer:
         self.net.flush_iptables(sudo_passwd)
 
         logger.debug("tearing down network infrastructure")
-        self.net.teardown(sudo_passwd)
+        try:
+            self.net.teardown(sudo_passwd)
+        except IoTSuiteError as e:
+            raise e
 
     def vm_iotftp_server(self):
         """

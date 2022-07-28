@@ -51,7 +51,8 @@ class NetAnalyzer:
     def set_pcap_file(self, pcapfile):
         self.pcap = dpkt.pcap.Reader(open(pcapfile, "rb"))
 
-    def get_result(self, dns):
+    def get_result(self, pcapfile, dns):
+        self.set_pcap_file(pcapfile)
         return NetResult(
             self.read_packets(),
             self._parse_dns_output(dns)
@@ -91,5 +92,3 @@ class NetAnalyzer:
         res = self.dns_re.findall(dns)
 
         return res
-
-
