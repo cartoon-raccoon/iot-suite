@@ -20,7 +20,7 @@ class AnalysisResult:
     front-end interface that can deserialize JSON or pickle data.
     """
     def __init__(self, **plugin_results):
-        for mod, res in plugin_results:
+        for mod, res in plugin_results.items():
             setattr(self, mod, res)
 
     def __getitem__(self, item):
@@ -155,11 +155,31 @@ class Orchestrator:
                 pid, syscall = self.syscalls.parse_syscalls(trace)
                 syscalls[pid] = syscall
 
-            # todo: parse everything else lmao
-            
             final["syscalls"] = syscalls
+            final["createdfiles"] = self.dynamicres.createdfiles
+
+            net = self.net_analyzer.get_result(
+                self.dynamicres.pcap,
+                self.dynamicres.dnsoutput
+            )
+            final["dns"] = net.dns
+            # todo: parse packets
 
         return final
+
+    @property
+    def dynamic_results(self):
+        if self._was_completed("dynamic"):
+            return self.dynamicres
+        else:
+            return None
+
+    @property
+    def static_results(self):
+        if self._was_completed("static"):
+            return self.staticres
+        else:
+            return None
 
 
     def run_plugins(self):
