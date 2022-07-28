@@ -110,13 +110,22 @@ class IoTSuite:
         self.target = os.path.basename(self.target)
 
         self.orchestrator.run(self.target, self.command)
+        logger.info("Processing retrieved execution traces")
         self.final = self.orchestrator.run_analysis()
+
+        logger.info("Exporting files to output directory")
+        self._export_files()
+
+        # cleanup trace directory
+        logger.debug("cleaning up working directory")
+        for file in os.listdir():
+            os.remove(file)
 
         os.chdir(self.output_dir)
 
         logger.info("Writing results to JSON")
         # todo: fix the jank
-        with open("results.json", "w") as f:
+        with open(f"{self.target}_results.json", "w") as f:
             f.write(self.final.export_as_json())
 
         # handle json and file output here
@@ -125,6 +134,33 @@ class IoTSuite:
 
         # handle finalization
         return
+
+    def _export_files(self):
+        files = self.orchestrator.dynamic_results
+        try:
+            export_raw = self.config.GENERAL["ExportRaw"].split(",")
+        except KeyError:
+            export_raw = ["pcap"]
+
+        if files is not None:
+            for file in files.createdfiles:
+                try:
+                    shutil.copy(file, self.output_dir)
+                except:
+                    logger.warning(f"Could not copy created file {file}")
+
+            if "pcap" in export_raw or "all" in export_raw:
+                try:
+                    shutil.copy(files.pcap, self.output_dir)
+                except:
+                    logger.warning(f"could not copy PCAP file {files.pcap}")
+
+            if "strace" in export_raw or "all" in export_raw:
+                for file in files.syscalls:
+                    try:
+                        shutil.copy(file, self.output_dir)
+                    except:
+                        logger.warning(f"Could not copy strace file {file}")
 
     def _verify_paths(self):
         # verify that all paths are valid, and convert them to absolute paths
