@@ -117,7 +117,6 @@ class Qemu:
             ]
         
         self.config = config
-        self._started = False
         self.ssh = None
         self.proc = None
         self.is_interactive = True
@@ -154,7 +153,7 @@ class Qemu:
     @property
     def started(self):
         try:
-            return self._started
+            return self._check_started()
         except AttributeError:
             return False
 
@@ -241,9 +240,12 @@ class Qemu:
                 return None
             
         else:
-            self.awaiting = self.conn.run(cmd, hide=True, asynchronous=True)
-            if not wait:
-                return None
+            if self._ssh_is_active():
+                self.awaiting = self.conn.run(cmd, hide=True, asynchronous=True)
+                if not wait:
+                    return None
+            else:
+                raise QemuError("ssh is not initiated")
         
         return self.wait_existing()
 
@@ -378,8 +380,9 @@ class Qemu:
         if self.awaiting is not None and not force:
             raise QemuError("attempted to stop QEMU controller while still awaiting")
 
-        if self.ssh:
+        if self._ssh_is_active():
             self.conn.close()
+            delattr(self, "conn")
 
         if self.config.qmp:
             e = self.send_qmp_cmd(QMPCommand("quit"))
@@ -390,13 +393,15 @@ class Qemu:
             self.qmp.shutdown(socket.SHUT_RDWR)
             self.qmp.close()
 
-            self.proc.expect(pexpect.EOF)
-
         else:
             self._enter_qemu_monitor()
             self.proc.sendline("quit")
 
-        self._started = False
+        self.proc.expect(pexpect.EOF)
+
+        if not self.proc.isalive():
+            self.proc.wait()
+
         self.proc = None
 
     def reset(self, tag):
@@ -409,6 +414,9 @@ class Qemu:
         """
 
         logger.debug(f"resetting qemu to state {tag}")
+
+        if not self.started:
+            raise QemuError("cannot perform live reset when VM is not running")
 
         if self.config.qmp:
             logger.error("cannot perform system reset via QMP")
@@ -426,6 +434,9 @@ class Qemu:
         in the implementation of `qemu-system-mips{,el}` requiring the reset
         to be performed offline using `qemu-img`, invoked via `offline_reset()`.
         """
+
+        if not self.started:
+            raise QemuError("cannot perform live snapshot when VM is not running")
 
         logger.debug(f"taking snapshot with tag {tag}")
 
@@ -479,16 +490,22 @@ class Qemu:
     #! ================== PRIVATE METHODS ===================
 
     def _check_started(self):
-        return self.started and hasattr(self, "proc")
+        return isinstance(self.proc, pexpect.spawn) and self.proc.isalive()
 
     def _expect_login_prompt(self, prompt):
         try:
-            self.proc.expect(f"{prompt}")
+            logger.debug("waiting for login prompt")
+            self.proc.expect_exact(f"{prompt}")
             logger.debug(f"output before: {self.proc.before}")
         except pexpect.EOF:
             raise QemuError(f"unexpected EOF when waiting for login")
         except pexpect.TIMEOUT:
             raise QemuError(f"expect timed out while waiting for login prompt")
+        except KeyboardInterrupt as e:
+            logger.debug("got ctrl-c, assuming VM did not start on time")
+            logger.debug("dumping proc before:")
+            logger.debug(f"{self.proc.before}")
+            raise e
 
     def _init_ssh(self, remote_ip, port=22):
         if not self._check_started():
@@ -502,6 +519,9 @@ class Qemu:
                 "password" : self.config.passwd
             }
         )
+
+    def _ssh_is_active(self):
+        return hasattr(self, "conn")
 
     def _init_qmp(self):
         # hook up to the QMP socket
@@ -562,7 +582,6 @@ class Qemu:
             maxread=1,
             timeout=self.config.timeout
         )
-        self._started = True
 
         # sleep for a second to give the VM time to start up the QMP server
         time.sleep(1)
