@@ -69,6 +69,13 @@ class Arch(Enum):
                 "-append", "rootwait quiet root=/dev/sda",
                 "-nic", f"tap,model=pcnet,helper={helper},mac={macaddr}"
             ],
+            Arch.I386 : [
+                "-M", "pc",
+                "-kernel", "{}/kernel.img",
+                "-drive", "file={}/rootfs.qcow2,if=virtio,format=qcow2",
+                "-append", "rootwait quiet root=/dev/vda console=tty1 console=ttyS0",
+                "-nic", f"tap,model=virtio,helper={helper},mac={macaddr}"
+            ],
             Arch.CNC : [
                 "-drive", "file={}/rootfs.qcow2,format=qcow2",
                 "-enable-kvm",
