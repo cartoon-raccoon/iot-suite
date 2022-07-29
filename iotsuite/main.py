@@ -38,6 +38,7 @@ class IoTSuite:
         self.command = args.command
         self.target = os.path.abspath(args.file.rstrip("/"))
 
+        # set logging level based on command line args
         if args.verbose:
             utils.logger.setLevel(logging.DEBUG)
         elif args.quiet:
@@ -57,6 +58,9 @@ class IoTSuite:
 
         self.config = Config(config)
         self._verify_paths()
+
+        if args.sudo_passwd is not None:
+            self.config.GENERAL["SudoPasswd"] = args.sudo_passwd
 
         if not os.path.exists(self.target):
             raise IoTSuiteError(f"no such file or directory: {self.target}")
