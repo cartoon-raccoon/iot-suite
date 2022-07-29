@@ -52,11 +52,13 @@ python3 (REQUIRED)
     python-git
     python-iptables (RECOMMENDED)
     python-netifaces (REQUIRED)
+    python-pexpect (RECOMMENDED)
     python-psutil (RECOMMENDED)
     python-pyaes
     python-pyelftools (RECOMMENDED)
     python-pyinotify (REQUIRED)
     python-requests
+    python-scapy
     python-urllib3
 ruby
 ```
@@ -83,7 +85,7 @@ iputils (REQUIRED)
 net-tools
 pure-ftpd
 rsync (RECOMMENDED)
-socat
+socat (RECOMMENDED)
 tcpdump (REQUIRED)
 traceroute
 wget
