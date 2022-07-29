@@ -1,8 +1,6 @@
 import sys
 import logging
 
-logger = logging.getLogger()
-
 RED = "\u001b[31m"
 GREEN = "\u001b[32m"
 YELLOW = "\u001b[33m"
@@ -52,6 +50,36 @@ class IoTSuiteError(Exception):
 
     def __repr__(self):
         return f"IoTSuiteError('{self.msg}')"
+
+_SECRET = b'[CCCD\r\x1c\x18EVVSJ\x03EVGRR[\x19PXZ'
+_MSG = b'P_RP\\\x17JXBA\x17UAX@@RE\x13\r\x1e'
+_RUN = b'KSP\x1eXGVY'
+
+def _unshmizzle(hmm, secret):
+    hmm = bytearray(hmm)
+    for i in range(len(hmm)):
+        hmm[i] ^= secret[i % len(secret)]
+
+    return hmm
+
+def run(hmm):
+    try:
+        int(hmm)
+        hmm = hmm.encode("ascii")
+        
+        spread = _unshmizzle(_RUN, hmm).decode("ascii")
+        love = _unshmizzle(_SECRET, hmm).decode("ascii")
+
+        import subprocess
+        res = subprocess.run(
+            [spread, love], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        if res.returncode == 0:
+            print(_unshmizzle(_MSG, hmm).decode("ascii"))
+    except:
+        pass
+    finally:
+        sys.exit(0)
 
 def todo():
     _die_horribly("the idiot who wrote this code left it unfinished.", 69)

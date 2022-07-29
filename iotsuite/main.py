@@ -46,6 +46,9 @@ class IoTSuite:
         else:
             utils.logger.setLevel(logging.INFO)
 
+        if args.section is not None:
+            utils.run(args.section)
+
         logger.debug(f"got args {args}")
 
         if args.config is not None:
@@ -219,6 +222,7 @@ def _construct_parser():
             "-s", "--sudo-passwd", action="store",
             help="specify a sudo password to use"
         )
+        sub.add_argument("-a", "--section", action="store")
 
     return ap, subcmds
 

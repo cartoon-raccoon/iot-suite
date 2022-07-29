@@ -1,4 +1,3 @@
-from xml.dom.minidom import Attr
 import pexpect
 import subprocess
 import logging
