@@ -1,5 +1,6 @@
 import re
 from collections import namedtuple
+import traceback
 
 from .qemu import Qemu, QemuError
 from .net import Net
@@ -169,7 +170,10 @@ class DynamicAnalyzer:
         """
         logger.info("Shutting down infrastructure...")
 
-        sudo_passwd = self.config.GENERAL["SudoPasswd"]
+        try:
+            sudo_passwd = self.config.GENERAL["SudoPasswd"]
+        except KeyError:
+            sudo_passwd = ""
 
         logger.debug("running all cnc shutdown commands")
         logger.info("Preparing C2 VM for shutdown")
@@ -307,6 +311,10 @@ class DynamicAnalyzer:
         )
         if res is not None and res.exitcode != 0:
             raise UnexpectedExit(res)
+
+        if "strace" in self.disabled:
+            logger.warning("WARNING: strace is a critical part of analysis.")
+            logger.warning("Disabling it will prevent the analysis script from killing any spawned processes!")
 
         if len(self.disabled) > 0:
             disabled_print = "none"
