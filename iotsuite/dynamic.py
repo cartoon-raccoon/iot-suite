@@ -13,19 +13,19 @@ from .config import Config
 logger = utils.logger.getChild("dynamic")
 
 # namedtuple for things
-Cmd = namedtuple("Cmd", ["cmd", "wait"])
+Cmd = namedtuple("Cmd", ["cmd", "wait", "accept_fail"])
 
 CNC_PRE_COMMANDS = [
-    Cmd(cmd="rm ~/cowrie/var/run/*", wait=True),
-    Cmd(cmd="cowrie/bin/cowrie start", wait=True),
+    Cmd(cmd="rm ~/cowrie/var/run/*", wait=True, accept_fail=True),
+    Cmd(cmd="cowrie/bin/cowrie start", wait=True, accept_fail=False),
 ]
 
 CNC_POST_COMMANDS = [
     #"sudo pkill python3",
-    Cmd(cmd="cowrie/bin/cowrie stop", wait=True),
+    Cmd(cmd="cowrie/bin/cowrie stop", wait=True, accept_fail=True),
 ]
 
-FAKEDNS_CMD = Cmd(cmd="sudo python3 FakeDns/fakedns.py -c {}", wait=False)
+FAKEDNS_CMD = Cmd(cmd="sudo python3 FakeDns/fakedns.py -c {}", wait=False, accept_fail=False)
 
 # the command to start the IoTFTP server, formatted with ip addr and port
 IOTFTP_START_CMD = "python iotftp/server.py {} {}"
@@ -161,8 +161,11 @@ class DynamicAnalyzer:
             logger.debug(f"running command '{cmd}'")
             res = self.cnc.run_cmd(cmd.cmd, wait=cmd.wait)
             if res.exitcode != 0:
-                logger.error(f"command '{cmd}' returned exitcode {res.exitcode}, errmsg '{res.output}'")
-                raise UnexpectedExit(res)
+                if not cmd.accept_fail:
+                    logger.error(f"command '{cmd}' returned exitcode {res.exitcode}, errmsg '{res.output}'")
+                    raise UnexpectedExit(res)
+                else:
+                    logger.warning(f"command {cmd} returned exitcode {res.exitcode}")
 
     def shutdown(self):
         """
